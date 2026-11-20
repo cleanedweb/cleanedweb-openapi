@@ -145,8 +145,12 @@ characters, so the path is no customer route at all.
 Aborting a queued run answers `200` at once with `status: aborted` and `units_charged: 0` (not `202`). Its
 `GET /v1/runs/{id}/result` then answers `200` with no records and `summary.status: bounded`,
 `summary.within_scope_passed: true`: the pair the docs and the SDKs treat as usable. A caller that checks only the
-summary takes an empty, aborted run for a complete bounded one. The engine should report the abort in
-`summary.status` (or the SDKs should also require `run.status: finished`). The spec says to check `run.status`.
+summary takes an empty, aborted run for a complete bounded one.
+
+**Fixed:** engine `65bdf2c894` answers an aborted run with `summary.status: partial` and
+`within_scope_passed: false` (the published contract allows `partial` only with `false`); live once released.
+The Python, JS and Go SDKs, the n8n node and the Action also require `run.status: finished` when the body
+carries a run (case `runs_result_aborted_is_not_usable`).
 
 ## Live run 2026-11-20
 

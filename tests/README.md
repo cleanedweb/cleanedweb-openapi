@@ -37,7 +37,8 @@ documents, written by `scripts/check_drift.py --write-snapshot`).
 
 `expect.result` (run results): any subset of `complete`, `usable`, `status_code`, `idempotency_key`, `run_id`, `record_count`,
 `stop_reason`, `units_charged`, `version`, `rerouted`, `deprecation`, `sunset`. `complete` is true for a `200`.
-`usable` is true when `complete` and `summary.status` is `completed` or `bounded` and `summary.within_scope_passed` is true.
+`usable` is true when `complete` and `summary.status` is `completed` or `bounded` and `summary.within_scope_passed` is true
+and `run.status`, when present, is `finished` (an aborted run is never usable; `FINDINGS.md`, finding 16).
 
 `expect.run` (run object): `run_id`, `status`, `stop_reason`, `ended` (status is `finished`, `failed` or `aborted`),
 `items` (`progress.items`), `units_charged`, `abort_requested`, `replayed` (the `Idempotent-Replayed` header).

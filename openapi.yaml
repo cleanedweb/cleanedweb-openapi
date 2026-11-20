@@ -555,7 +555,8 @@ paths:
       description: |
         `202` with the run object while it stops, `200` if it had already ended. A run still `queued` stops at once:
         `200` with `status: aborted`, nothing charged. Records committed so far stay readable and charged. The result
-        of an aborted run reads as `bounded` (`FINDINGS.md`, finding 16).
+        of an aborted run reads as `partial` with `within_scope_passed` false; before engine `65bdf2c894` is
+        released it reads `bounded` (`FINDINGS.md`, finding 16).
       x-scopes-any-of: [run]
       parameters:
         - $ref: '#/components/parameters/RunId'
@@ -2249,7 +2250,7 @@ components:
           type: integer
     RunResult:
       type: object
-      description: A run that ended. Check `summary.status` is `completed` or `bounded` and `summary.within_scope_passed` is true before you use the records. An aborted run also reports `bounded` with `within_scope_passed` true, so check `run.status` is `finished` as well (`FINDINGS.md`, finding 16).
+      description: A run that ended. Check `summary.status` is `completed` or `bounded` and `summary.within_scope_passed` is true before you use the records. Also check `run.status` is `finished`; an aborted run reports `partial`, and reported `bounded` with `within_scope_passed` true until engine `65bdf2c894` (`FINDINGS.md`, finding 16).
       properties:
         records:
           type: array
