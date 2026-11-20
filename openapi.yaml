@@ -8,9 +8,8 @@ info:
     the customer-facing surface only: the published catalog, runs, schedules and the source APIs of your
     own workspace. Builder, admin, control and pipeline routes are not part of it.
 
-    **Private preview.** This repository is private and the document may change before the first public
-    release. See `FINDINGS.md` for every place where the documentation, the engine and the live service
-    disagree.
+    **Pre-release.** The document may change before the first SDK release. See `FINDINGS.md` for every
+    place where the documentation, the engine and the live service disagree.
 
     ## Origins
 

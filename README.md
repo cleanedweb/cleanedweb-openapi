@@ -4,8 +4,7 @@ The OpenAPI 3.1 description of the public [CleanedWeb](https://cleanedweb.com/?u
 API, and the language-neutral conformance cases every CleanedWeb SDK runs in CI. CleanedWeb turns public website
 collections (listings, products, jobs, articles, profiles) into maintained REST APIs that return structured records.
 
-> **Private preview.** This repository is private and the contract may change before the first public release.
-> Nothing here is published. SDKs: [cleanedweb-go](https://github.com/cleanedweb/cleanedweb-go),
+> **Pre-release.** The contract may change before the first SDK release. SDKs: [cleanedweb-go](https://github.com/cleanedweb/cleanedweb-go),
 > [cleanedweb-python](https://github.com/cleanedweb/cleanedweb-python), [cleanedweb-js](https://github.com/cleanedweb/cleanedweb-js).
 
 **Pricing:** 5,000 records free once, then prepaid credit from $1 per 1,000 records delivered, no subscription.
@@ -50,7 +49,7 @@ python scripts/check_drift.py --live-file tests/fixtures/engine-curated-routes.j
 
 Generate a client from `openapi.yaml` with any OpenAPI 3.1 tool, or hand-write one against it as the CleanedWeb SDKs do.
 An SDK must pass the conformance cases: copy `tests/cases` and `tests/case.schema.json` into the SDK (the SDKs sync them
-with a script, since this repository is private) and run each case against a mock server.
+with a script) and run each case against a mock server.
 
 ## CI
 
