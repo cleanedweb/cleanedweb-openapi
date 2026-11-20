@@ -6,6 +6,10 @@ writing `openapi.yaml`. Engine paths are relative to `cleanedweb-com/cleanedweb/
 `cleanedweb-site/docs/content/`. Checked 2026-11-20. The spec and the conformance cases cite these
 by number.
 
+**Status 2026-11-20:** findings 2, 5 and 10 are fixed in the engine at `577f32222e` (live after the next
+engine release). Findings 1, 3, 4, 6, 7, 8, 9 and 11 are fixed in the site docs and are live. The SDKs default
+to `https://api.cleanedweb.com`.
+
 ## 1. The API origin is `https://api.cleanedweb.com`, not the broker
 
 The docs and the first SDKs send runs to `https://broker.cleanedweb.com`. They should use
