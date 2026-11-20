@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Compare openapi.yaml with the live FastAPI document of the API origin.
+"""Compare openapi.yaml with the engine's FastAPI document.
 
-    python scripts/check_drift.py                      # fetch https://api.cleanedweb.com/openapi.json
-    python scripts/check_drift.py --live-file x.json   # compare with a saved document (offline)
-    python scripts/check_drift.py --strict             # unclassified live routes also fail
+The API origin no longer serves /openapi.json (engine 577f32222e), so the document is built from an
+engine checkout: the script runs the engine's own Python to call create_app().openapi().
+
+    python scripts/check_drift.py --engine-dir ../cleanedweb-com   # build the document from the engine
+    python scripts/check_drift.py --live-file x.json               # compare with a saved document
+    python scripts/check_drift.py --url URL                        # fetch a document that is still served
+    add --strict to fail on unclassified engine routes as well
 
 Reports, for the paths this repository serves from the API origin:
 
-* MISSING   a curated method and path the live document does not have (exit 1),
-* PARAMS    a query parameter the live document declares and openapi.yaml lacks (exit 1). A parameter only
+* MISSING   a curated method and path the engine document does not have (exit 1),
+* PARAMS    a query parameter the engine document declares and openapi.yaml lacks (exit 1). A parameter only
   openapi.yaml documents is a note: several run routes read their query themselves and declare nothing,
 * UNCLASSIFIED  a live route that is neither curated nor listed in scripts/internal-routes.txt
   (a new route: decide whether it is public; exit 1 only with --strict),
@@ -16,13 +20,14 @@ Reports, for the paths this repository serves from the API origin:
 
 Paths under another origin (the console's /api/catalog reads and the catalog site files) are not in the
 live document and are skipped. Needs PyYAML:  pip install pyyaml
-Exit codes: 0 no drift, 1 drift, 2 the live document could not be read.
+Exit codes: 0 no drift, 1 drift, 2 the engine document could not be read.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import re
+import subprocess
 import sys
 import urllib.request
 from pathlib import Path
@@ -30,7 +35,23 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-LIVE_URL = "https://api.cleanedweb.com/openapi.json"
+ENGINE_DUMP = (
+    "import json, sys, warnings; warnings.simplefilter('ignore');"
+    "from cleanedweb.builder.server import create_app;"
+    "json.dump(create_app().openapi(), sys.stdout)"
+)
+
+
+def engine_document(engine_dir: str) -> dict:
+    root = Path(engine_dir).resolve()
+    python = root / ".venv" / "bin" / "python"
+    if not python.exists():
+        raise FileNotFoundError(f"{python} not found; create the engine's .venv first")
+    out = subprocess.run(
+        [str(python), "-c", ENGINE_DUMP], cwd=root, capture_output=True, text=True, check=True,
+        env={"PYTHONDONTWRITEBYTECODE": "1", "PATH": "/usr/bin:/bin"},
+    )
+    return json.loads(out.stdout)
 METHODS = {"get", "post", "put", "delete", "patch"}
 
 
@@ -75,21 +96,25 @@ def internal_patterns() -> list[re.Pattern]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--live-file", help="read the live document from a file instead of the network")
-    ap.add_argument("--url", default=LIVE_URL)
+    source = ap.add_mutually_exclusive_group(required=True)
+    source.add_argument("--engine-dir", help="engine checkout (cleanedweb-com) whose .venv builds the document")
+    source.add_argument("--live-file", help="read the document from a file")
+    source.add_argument("--url", help="fetch the document from a URL")
     ap.add_argument("--strict", action="store_true", help="unclassified live routes also fail")
     args = ap.parse_args()
 
     spec = yaml.safe_load((ROOT / "openapi.yaml").read_text())
     try:
-        if args.live_file:
+        if args.engine_dir:
+            live_doc = engine_document(args.engine_dir)
+        elif args.live_file:
             live_doc = json.loads(Path(args.live_file).read_text())
         else:
             request = urllib.request.Request(args.url, headers={"User-Agent": "cleanedweb-openapi-drift-check"})
             with urllib.request.urlopen(request, timeout=30) as response:
                 live_doc = json.load(response)
     except Exception as exc:  # network, TLS, JSON
-        print(f"cannot read the live document: {exc}", file=sys.stderr)
+        print(f"cannot read the engine document: {exc}", file=sys.stderr)
         return 2
 
     ours, theirs = curated_routes(spec), live_routes(live_doc)
@@ -108,16 +133,16 @@ def main() -> int:
     )
 
     for method, path in missing:
-        print(f"MISSING       {method} {path}: curated, but not in the live document")
+        print(f"MISSING       {method} {path}: curated, but not in the engine document")
     for (method, path), only_live in params:
-        print(f"PARAMS        {method} {path}: the live document declares {only_live}, openapi.yaml does not")
+        print(f"PARAMS        {method} {path}: the engine document declares {only_live}, openapi.yaml does not")
     for (method, path), only_curated in undeclared:
-        print(f"note          {method} {path}: {only_curated} documented here, undeclared in the live document (the route reads them itself)")
+        print(f"note          {method} {path}: {only_curated} documented here, undeclared in the engine document (the route reads them itself)")
     for method, path in unclassified:
         print(f"UNCLASSIFIED  {method} {path}: live, neither curated nor listed as internal")
     live_count = len(set(ours) & set(theirs))
     print(f"{live_count}/{len(ours)} curated routes are live; {len(unclassified)} unclassified live routes; "
-          f"{len(theirs)} routes in the live document")
+          f"{len(theirs)} routes in the engine document")
     failed = bool(missing or params or (args.strict and unclassified))
     return 1 if failed else 0
 

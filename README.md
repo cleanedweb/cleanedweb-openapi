@@ -18,7 +18,7 @@ collections (listings, products, jobs, articles, profiles) into maintained REST 
 | [`openapi.yaml`](openapi.yaml) | The curated customer-facing contract: public catalog, catalog runs, runs, source APIs, schedules. Admin, control, pipeline and builder routes are not in it. |
 | [`tests/cases/*.json`](tests) | Conformance cases as data: request, mocked responses, expected SDK outcome. Each SDK runs them. See [`tests/README.md`](tests/README.md). |
 | [`scripts/validate_conformance.py`](scripts/validate_conformance.py) | Checks every case against `openapi.yaml` (routes, statuses, request and response bodies). |
-| [`scripts/check_drift.py`](scripts/check_drift.py) | Diffs the curated paths and methods against the live FastAPI document of `api.cleanedweb.com`. |
+| [`scripts/check_drift.py`](scripts/check_drift.py) | Diffs the curated paths and methods against the engine's FastAPI document, built from an engine checkout (the API origin no longer serves it). |
 | `FINDINGS.md` | Every place the docs, the engine and the live service disagree, with evidence. |
 
 ## The origin
@@ -44,8 +44,8 @@ also served on `https://app.cleanedweb.com/api/catalog/` and, as static files, o
 pip install -r requirements.txt            # pyyaml, jsonschema, referencing
 npx --yes @redocly/cli@latest lint openapi.yaml
 python scripts/validate_conformance.py     # cases vs. spec
-python scripts/check_drift.py              # spec vs. live (needs network)
-python scripts/check_drift.py --live-file tests/fixtures/live-openapi-snapshot.json   # offline
+python scripts/check_drift.py --engine-dir ../cleanedweb-com --strict   # spec vs. the engine checkout
+python scripts/check_drift.py --live-file tests/fixtures/live-openapi-snapshot.json   # offline snapshot
 ```
 
 Generate a client from `openapi.yaml` with any OpenAPI 3.1 tool, or hand-write one against it as the CleanedWeb SDKs do.
@@ -55,8 +55,13 @@ with a script, since this repository is private) and run each case against a moc
 ## CI
 
 `.github/workflows/ci.yml` lints the spec with Redocly, validates the conformance cases against it and runs the drift
-script offline against a snapshot. `.github/workflows/drift.yml` runs the drift script against the live service on a
-schedule and on demand; it can fail when production changes, which is the point.
+script offline against a snapshot. The engine repository is private and `api.cleanedweb.com` no longer serves its
+FastAPI document, so the comparison with the current engine runs locally with `--engine-dir` (do it when the engine
+changes a customer route, then refresh the snapshot).
+
+Before this repository goes public, remove `tests/fixtures/live-openapi-snapshot.json` and `scripts/internal-routes.txt`
+(or move the drift check into the engine repository): both list the engine's internal routes, which the engine stopped
+publishing.
 
 ## Changing the contract
 
