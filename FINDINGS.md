@@ -52,7 +52,13 @@ customer key of each scope:
 | catalog `/filters` | ok | ok | 403 |
 
 A source run that answers `202` is charged and keeps running, but a `run`-only key cannot read its
-result. Derived from `authorize_request`; not yet confirmed with a production key.
+result. Derived from `authorize_request`.
+
+**Confirmed fixed live 2026-11-20** with a production key holding only `run` (created for the test, revoked
+after): `GET /v1/runs`, `/v1/runs/{id}`, `/items`, `/result`, `/v1/sources/{s}/runs/{id}` and its `/result`,
+catalog `/result` (keyed) and `/filters` answer `200`; source `health`, `connection`, `versions` and
+`GET /v1/schedules` answer `403` `Credential scope does not allow this operation`. All as `x-scopes-any-of`
+says. A run of another workspace answers `404` `Run not found`.
 
 ## 3. Schedules exist; the docs say they do not
 
@@ -178,5 +184,6 @@ source `generated_b4994166c5cfc78e99c910e7` with `max_items` 3.
   `404` for an unknown category and `422` for bad `filters` JSON, both in the `error` envelope (finding 12); `401`
   without a key.
 
-Still not observed: `402` and `429` (only by draining credit or flooding production), `5xx`, a `202` abort, and
-finding 2 with a key that has `run` but not `results` (needs a new key).
+Finding 2 was then confirmed with a `run`-only key (see finding 2; 6 Units on that workspace).
+
+Still not observed: `402` and `429` (only by draining credit or flooding production), `5xx` and a `202` abort.
