@@ -1,0 +1,139 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CleanedWeb engine routes in openapi.yaml",
+    "description": "Written by scripts/check_drift.py --write-snapshot from the engine's FastAPI document."
+  },
+  "paths": {
+    "/v1/catalog/public/apis": {
+      "get": {
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "name": "sort",
+            "in": "query"
+          }
+        ]
+      }
+    },
+    "/v1/catalog/public/apis/{api_id}": {
+      "get": {}
+    },
+    "/v1/catalog/public/apis/{api_id}/endpoints/{endpoint_id}/contract": {
+      "get": {
+        "parameters": [
+          {
+            "name": "version",
+            "in": "query"
+          }
+        ]
+      }
+    },
+    "/v1/catalog/public/apis/{api_id}/endpoints/{endpoint_id}/filters": {
+      "get": {
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "name": "filters",
+            "in": "query"
+          }
+        ]
+      }
+    },
+    "/v1/catalog/public/apis/{api_id}/endpoints/{endpoint_id}/result": {
+      "get": {}
+    },
+    "/v1/catalog/public/apis/{api_id}/endpoints/{endpoint_id}/run": {
+      "post": {}
+    },
+    "/v1/runs": {
+      "get": {}
+    },
+    "/v1/runs/{run_id}": {
+      "get": {}
+    },
+    "/v1/runs/{run_id}/abort": {
+      "post": {}
+    },
+    "/v1/runs/{run_id}/items": {
+      "get": {}
+    },
+    "/v1/runs/{run_id}/result": {
+      "get": {}
+    },
+    "/v1/schedules": {
+      "get": {},
+      "post": {}
+    },
+    "/v1/schedules/{schedule_id}": {
+      "delete": {},
+      "get": {}
+    },
+    "/v1/schedules/{schedule_id}/pause": {
+      "post": {}
+    },
+    "/v1/schedules/{schedule_id}/resume": {
+      "post": {}
+    },
+    "/v1/sources/{source_id}/connection": {
+      "get": {}
+    },
+    "/v1/sources/{source_id}/health": {
+      "get": {}
+    },
+    "/v1/sources/{source_id}/run": {
+      "post": {}
+    },
+    "/v1/sources/{source_id}/runs": {
+      "post": {}
+    },
+    "/v1/sources/{source_id}/runs/{run_id}": {
+      "get": {}
+    },
+    "/v1/sources/{source_id}/runs/{run_id}/result": {
+      "get": {}
+    },
+    "/v1/sources/{source_id}/stream": {
+      "post": {}
+    },
+    "/v1/sources/{source_id}/versions": {
+      "get": {
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "name": "cursor",
+            "in": "query"
+          }
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/versions/{definition_version}/contract": {
+      "get": {}
+    }
+  }
+}

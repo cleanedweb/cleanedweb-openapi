@@ -5,7 +5,8 @@ the calls the SDK must make, what the mock answers, and what the SDK must return
 checks every case against `../openapi.yaml`, so the data cannot drift from the contract.
 
 Files: `cases/*.json` (each `{"group", "cases": [...]}`), `case.schema.json` (the format),
-`fixtures/live-openapi-snapshot.json` (input of the offline drift check).
+`fixtures/engine-curated-routes.json` (input of the offline drift check: the engine's routes that `openapi.yaml`
+documents, written by `scripts/check_drift.py --write-snapshot`).
 
 ## Running a case
 

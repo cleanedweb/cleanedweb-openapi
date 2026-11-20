@@ -45,7 +45,7 @@ pip install -r requirements.txt            # pyyaml, jsonschema, referencing
 npx --yes @redocly/cli@latest lint openapi.yaml
 python scripts/validate_conformance.py     # cases vs. spec
 python scripts/check_drift.py --engine-dir ../cleanedweb-com --strict   # spec vs. the engine checkout
-python scripts/check_drift.py --live-file tests/fixtures/live-openapi-snapshot.json   # offline snapshot
+python scripts/check_drift.py --live-file tests/fixtures/engine-curated-routes.json   # offline snapshot
 ```
 
 Generate a client from `openapi.yaml` with any OpenAPI 3.1 tool, or hand-write one against it as the CleanedWeb SDKs do.
@@ -55,13 +55,16 @@ with a script, since this repository is private) and run each case against a moc
 ## CI
 
 `.github/workflows/ci.yml` lints the spec with Redocly, validates the conformance cases against it and runs the drift
-script offline against a snapshot. The engine repository is private and `api.cleanedweb.com` no longer serves its
-FastAPI document, so the comparison with the current engine runs locally with `--engine-dir` (do it when the engine
-changes a customer route, then refresh the snapshot).
+script offline against `tests/fixtures/engine-curated-routes.json`: the engine's routes that `openapi.yaml` documents,
+with their query parameters, and nothing else. The engine repository is private and `api.cleanedweb.com` no longer
+serves its FastAPI document, so the full comparison runs locally with `--engine-dir`. It also reports engine routes
+that are neither documented here nor listed as internal; that list names internal routes, so it lives in the engine
+checkout (`docs/customer-api-internal-routes.txt`). When the engine changes a customer route, run it and refresh the
+fixture:
 
-Before this repository goes public, remove `tests/fixtures/live-openapi-snapshot.json` and `scripts/internal-routes.txt`
-(or move the drift check into the engine repository): both list the engine's internal routes, which the engine stopped
-publishing.
+```bash
+python scripts/check_drift.py --engine-dir ../cleanedweb-com --strict --write-snapshot tests/fixtures/engine-curated-routes.json
+```
 
 ## Changing the contract
 

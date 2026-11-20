@@ -23,4 +23,4 @@ jobs:
       - name: Validate the conformance cases against the spec
         run: python scripts/validate_conformance.py
       - name: Drift check against the saved snapshot (offline)
-        run: python scripts/check_drift.py --live-file tests/fixtures/live-openapi-snapshot.json
+        run: python scripts/check_drift.py --live-file tests/fixtures/engine-curated-routes.json
