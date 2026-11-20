@@ -1,0 +1,1062 @@
+{
+  "group": "sources",
+  "cases": [
+    {
+      "id": "sources_run_200",
+      "title": "sources.run sends expected_version and answers a usable result",
+      "operation": "sources.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "input": {
+          "q": "x"
+        },
+        "expected_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+        "max_items": 3,
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/sources/my_source/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "expected_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "input": {
+                "q": "x"
+              },
+              "max_items": 3
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                },
+                {
+                  "title": "repo-1",
+                  "url": "https://github.com/example/repo-1"
+                },
+                {
+                  "title": "repo-2",
+                  "url": "https://github.com/example/repo-2"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 3
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 3,
+                  "duplicates": 0
+                },
+                "units_charged": 3,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 3
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "usable": true,
+          "record_count": 3,
+          "idempotency_key": "$key"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "sources_run_202_polls_run_result_not_repost",
+      "title": "A 202 from a source run is followed by GET /v1/runs/{run_id}/result, never by another POST",
+      "operation": "sources.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/sources/my_source/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Location": "/v1/runs/0123456789abcdef0123456789abcdef",
+              "Retry-After": "2"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "queued",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Retry-After": "2"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "running",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                },
+                {
+                  "title": "repo-1",
+                  "url": "https://github.com/example/repo-1"
+                },
+                {
+                  "title": "repo-2",
+                  "url": "https://github.com/example/repo-2"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 3
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 3,
+                  "duplicates": 0
+                },
+                "units_charged": 3,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 3
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "usable": true,
+          "idempotency_key": "$key",
+          "run_id": "0123456789abcdef0123456789abcdef"
+        },
+        "sleeps": [
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "id": "sources_run_both_versions_sends_nothing",
+      "title": "expected_version and definition_version together fail before any request",
+      "operation": "sources.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "input": {},
+        "expected_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+        "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [],
+      "expect": {
+        "error": {
+          "kind": "invalid_argument"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "sources_run_version_conflict_409",
+      "title": "409 builder_definition_version_conflict is a version conflict, not retried",
+      "operation": "sources.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "input": {},
+        "expected_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/sources/my_source/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "expected_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 409,
+            "json": {
+              "detail": {
+                "code": "builder_definition_version_conflict"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "version_conflict",
+          "status_code": 409,
+          "code": "builder_definition_version_conflict"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "sources_run_failed_marker",
+      "title": "A failed source run carries the marker and is final",
+      "operation": "sources.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/sources/my_source/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 502,
+            "json": {
+              "detail": {
+                "code": "run_failed",
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "error_code": "run_failed",
+                "replayed": false
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "server",
+          "status_code": 502,
+          "run_failed": true,
+          "run_id": "0123456789abcdef0123456789abcdef"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "sources_start_without_waiting",
+      "title": "sources.start sends wait_seconds 0 to /runs and returns the run object",
+      "operation": "sources.start",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/sources/my_source/runs",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            },
+            "body": {
+              "input": {},
+              "wait_seconds": 0
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Location": "/v1/runs/0123456789abcdef0123456789abcdef",
+              "Idempotent-Replayed": "true"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "queued",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        }
+      ],
+      "expect": {
+        "run": {
+          "run_id": "0123456789abcdef0123456789abcdef",
+          "status": "queued",
+          "replayed": true
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "sources_get_run_detail",
+      "title": "sources.get_run reads the recorded details of a source run",
+      "operation": "sources.get_run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "run_id": "0123456789abcdef0123456789abcdef"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/sources/my_source/runs/0123456789abcdef0123456789abcdef",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "contract_version": "builder-run-detail-v1",
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "source_id": "my_source",
+                "outcome": "succeeded",
+                "records": 3
+              },
+              "results": {
+                "state": "available"
+              },
+              "billing": {
+                "state": "ready",
+                "units": "3",
+                "receipt_id": "0123456789abcdef0123456789abcdef",
+                "reserved_units": null
+              },
+              "recovery": {}
+            }
+          }
+        }
+      ],
+      "expect": {
+        "data": {
+          "contract_version": "builder-run-detail-v1",
+          "results": {
+            "state": "available"
+          },
+          "billing": {
+            "units": "3"
+          }
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "sources_get_run_result_polls",
+      "title": "sources.get_run_result polls like runs.result",
+      "operation": "sources.get_run_result",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "run_id": "0123456789abcdef0123456789abcdef"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/sources/my_source/runs/0123456789abcdef0123456789abcdef/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Retry-After": "3"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "running",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/sources/my_source/runs/0123456789abcdef0123456789abcdef/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                },
+                {
+                  "title": "repo-1",
+                  "url": "https://github.com/example/repo-1"
+                },
+                {
+                  "title": "repo-2",
+                  "url": "https://github.com/example/repo-2"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 3
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 3,
+                  "duplicates": 0
+                },
+                "units_charged": 3,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 3
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "usable": true,
+          "record_count": 3
+        },
+        "sleeps": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "sources_versions",
+      "title": "sources.versions lists definition versions",
+      "operation": "sources.versions",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "limit": 20
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/sources/my_source/versions",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            },
+            "query": {
+              "limit": "20"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "items": [
+                {
+                  "source_id": "my_source",
+                  "version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                  "status": "active",
+                  "created_at": 1794002843.2,
+                  "jobs_truncated": false,
+                  "jobs": [
+                    {
+                      "job_id": "job1",
+                      "state": "succeeded",
+                      "created_at": 1794002800.0,
+                      "updated_at": 1794002843.0,
+                      "kind": "build",
+                      "base_version": null,
+                      "activated_at": null,
+                      "activation": null,
+                      "reverted": null
+                    }
+                  ]
+                }
+              ],
+              "next_cursor": null,
+              "consistency": "membership_bounded_current_content"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "data": {
+          "items": [
+            {
+              "version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "active"
+            }
+          ],
+          "next_cursor": null
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "sources_version_contract",
+      "title": "sources.version_contract reads one version's contract",
+      "operation": "sources.version_contract",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/sources/my_source/versions/eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252/contract",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "schema_version": 1,
+              "source_id": "my_source",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "output_version": "1",
+              "limits": {
+                "max_pages": 10,
+                "max_details": 0
+              },
+              "openapi": {
+                "openapi": "3.1.0",
+                "paths": {}
+              },
+              "request": {
+                "method": "POST",
+                "path": "/v1/sources/my_source/run",
+                "headers": {
+                  "Idempotency-Key": "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f"
+                },
+                "body": {
+                  "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                  "input": {}
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "data": {
+          "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+          "request": {
+            "method": "POST",
+            "path": "/v1/sources/my_source/run"
+          }
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "sources_connection",
+      "title": "sources.connection reads connection details (paths only, never an origin)",
+      "operation": "sources.connection",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/sources/my_source/connection",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "source_id": "my_source",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "rest": {
+                "method": "POST",
+                "path": "/v1/sources/my_source/run",
+                "body": {
+                  "expected_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                  "input": {}
+                },
+                "headers": {
+                  "Idempotency-Key": "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f"
+                },
+                "curl": "curl --fail-with-body ..."
+              },
+              "mcp": {
+                "path": "/mcp"
+              },
+              "authentication": "Bearer workspace credential; keep it outside URLs and source code",
+              "idempotency": {
+                "instructions": "Keep the same key and request when retrying."
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "data": {
+          "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+          "rest": {
+            "method": "POST",
+            "path": "/v1/sources/my_source/run"
+          }
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "sources_health_forbidden_for_scoped_keys",
+      "title": "sources.health answers 403 to every scoped customer key",
+      "operation": "sources.health",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/sources/my_source/health",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 403,
+            "json": {
+              "detail": "Credential scope does not allow this operation"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "permission_denied",
+          "status_code": 403
+        },
+        "sleeps": []
+      },
+      "spec_note": "FINDINGS.md finding 5: no scope opens this route."
+    },
+    {
+      "id": "sources_health_ok",
+      "title": "sources.health reads the health report",
+      "operation": "sources.health",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/sources/my_source/health",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "source_id": "my_source",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "unknown",
+              "checked_at": null,
+              "evidence": {}
+            }
+          }
+        }
+      ],
+      "expect": {
+        "data": {
+          "status": "unknown",
+          "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "sources_stream_events",
+      "title": "sources.stream yields one event per NDJSON line; a failed run ends with an error event, not an HTTP error",
+      "operation": "sources.stream",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "source_id": "my_source",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/sources/my_source/stream",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "Location": "/v1/runs/0123456789abcdef0123456789abcdef",
+              "Content-Type": "application/x-ndjson"
+            },
+            "text": "{\"type\":\"progress\",\"stage\":\"running\",\"run\":{\"run_id\":\"0123456789abcdef0123456789abcdef\",\"status\":\"running\"},\"sequence\":1}\n{\"type\":\"records\",\"records\":[{\"title\":\"a\"},{\"title\":\"b\"}],\"definition_version\":\"eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252\",\"sequence\":2}\n{\"type\":\"progress\",\"stage\":\"heartbeat\",\"elapsedMs\":10000,\"sequence\":3}\n{\"type\":\"error\",\"statusCode\":502,\"code\":\"run_failed\",\"run_id\":\"0123456789abcdef0123456789abcdef\",\"error_code\":\"run_failed\",\"replayed\":false,\"elapsedMs\":12000,\"sequence\":4}\n"
+          }
+        }
+      ],
+      "expect": {
+        "events": [
+          {
+            "type": "progress",
+            "stage": "running"
+          },
+          {
+            "type": "records",
+            "records": [
+              {
+                "title": "a"
+              },
+              {
+                "title": "b"
+              }
+            ]
+          },
+          {
+            "type": "progress",
+            "stage": "heartbeat"
+          },
+          {
+            "type": "error",
+            "statusCode": 502,
+            "error_code": "run_failed"
+          }
+        ],
+        "sleeps": []
+      }
+    }
+  ]
+}

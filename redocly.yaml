@@ -1,0 +1,10 @@
+extends:
+  - recommended
+rules:
+  # The public contract is not an example.com placeholder document.
+  no-server-example.com: off
+  # Every operation here lists its error responses explicitly.
+  operation-4xx-response: error
+  # The servers list names one origin; some paths override it on purpose.
+  no-empty-servers: off
+  info-license-strict: off

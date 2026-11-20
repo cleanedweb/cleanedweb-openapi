@@ -1,0 +1,878 @@
+{
+  "group": "schedules",
+  "cases": [
+    {
+      "id": "schedules_create_201",
+      "title": "schedules.create sends the key as the Idempotency-Key header and returns the new schedule",
+      "operation": "schedules.create",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "max_items": 100,
+        "every": "day",
+        "at_utc": "06:30",
+        "name": "Daily GitHub topics",
+        "idempotency_key": "daily-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/schedules",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "daily-1",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "api_id": "generated_047a8ebb25911ccf62f4a212",
+              "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "input": {},
+              "max_items": 100,
+              "every": "day",
+              "at_utc": "06:30",
+              "name": "Daily GitHub topics"
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "Location": "/v1/schedules/0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+            },
+            "json": {
+              "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+              "name": "Daily GitHub topics",
+              "state": "active",
+              "pause_reason": null,
+              "target": {
+                "api_id": "generated_047a8ebb25911ccf62f4a212",
+                "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search"
+              },
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "pinned_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "input": {},
+              "fields": null,
+              "max_items": 100,
+              "timeout_seconds": 10800,
+              "cadence": {
+                "every": "day",
+                "at_utc": "06:30"
+              },
+              "next_due_at": "2026-11-21T06:30:00+00:00",
+              "last_slot_at": null,
+              "last_run_id": null,
+              "last_status": null,
+              "consecutive_failures": 0,
+              "skipped_slots": 0,
+              "last_skip_reason": null,
+              "consecutive_skips": 0,
+              "deferred_reason": null,
+              "last_deferred_at": null,
+              "attention": [],
+              "created_at": "2026-11-20T05:30:00+00:00"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "schedule": {
+          "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+          "state": "active",
+          "cadence": {
+            "every": "day",
+            "at_utc": "06:30"
+          },
+          "replayed": false
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "schedules_create_replay_200",
+      "title": "A replayed key answers 200 with Idempotent-Replayed and the same schedule",
+      "operation": "schedules.create",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "max_items": 100,
+        "every": "day",
+        "at_utc": "06:30",
+        "name": "Daily GitHub topics",
+        "idempotency_key": "daily-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/schedules",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "daily-1",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "api_id": "generated_047a8ebb25911ccf62f4a212",
+              "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "input": {},
+              "max_items": 100,
+              "every": "day",
+              "at_utc": "06:30",
+              "name": "Daily GitHub topics"
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "Location": "/v1/schedules/0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+              "Idempotent-Replayed": "true"
+            },
+            "json": {
+              "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+              "name": "Daily GitHub topics",
+              "state": "active",
+              "pause_reason": null,
+              "target": {
+                "api_id": "generated_047a8ebb25911ccf62f4a212",
+                "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search"
+              },
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "pinned_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "input": {},
+              "fields": null,
+              "max_items": 100,
+              "timeout_seconds": 10800,
+              "cadence": {
+                "every": "day",
+                "at_utc": "06:30"
+              },
+              "next_due_at": "2026-11-21T06:30:00+00:00",
+              "last_slot_at": null,
+              "last_run_id": null,
+              "last_status": null,
+              "consecutive_failures": 0,
+              "skipped_slots": 0,
+              "last_skip_reason": null,
+              "consecutive_skips": 0,
+              "deferred_reason": null,
+              "last_deferred_at": null,
+              "attention": [],
+              "created_at": "2026-11-20T05:30:00+00:00"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "schedule": {
+          "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+          "replayed": true
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "schedules_create_429_retried_with_same_key",
+      "title": "A 429 on create is retried with the same key so it never makes a second schedule",
+      "operation": "schedules.create",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "max_items": 100,
+        "every": "day",
+        "at_utc": "06:30",
+        "name": "Daily GitHub topics",
+        "idempotency_key": "daily-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/schedules",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "daily-1",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "api_id": "generated_047a8ebb25911ccf62f4a212",
+              "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "input": {},
+              "max_items": 100,
+              "every": "day",
+              "at_utc": "06:30",
+              "name": "Daily GitHub topics"
+            }
+          },
+          "response": {
+            "status": 429,
+            "headers": {
+              "Retry-After": "2"
+            },
+            "json": {
+              "detail": {
+                "code": "engine_request_limited",
+                "retry_after_seconds": 2
+              }
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/schedules",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "daily-1",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "api_id": "generated_047a8ebb25911ccf62f4a212",
+              "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "input": {},
+              "max_items": 100,
+              "every": "day",
+              "at_utc": "06:30",
+              "name": "Daily GitHub topics"
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "Location": "/v1/schedules/0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+            },
+            "json": {
+              "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+              "name": "Daily GitHub topics",
+              "state": "active",
+              "pause_reason": null,
+              "target": {
+                "api_id": "generated_047a8ebb25911ccf62f4a212",
+                "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search"
+              },
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "pinned_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "input": {},
+              "fields": null,
+              "max_items": 100,
+              "timeout_seconds": 10800,
+              "cadence": {
+                "every": "day",
+                "at_utc": "06:30"
+              },
+              "next_due_at": "2026-11-21T06:30:00+00:00",
+              "last_slot_at": null,
+              "last_run_id": null,
+              "last_status": null,
+              "consecutive_failures": 0,
+              "skipped_slots": 0,
+              "last_skip_reason": null,
+              "consecutive_skips": 0,
+              "deferred_reason": null,
+              "last_deferred_at": null,
+              "attention": [],
+              "created_at": "2026-11-20T05:30:00+00:00"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "schedule": {
+          "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+          "replayed": false
+        },
+        "sleeps": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "schedules_create_idempotency_conflict_409",
+      "title": "The same key with another request answers 409 schedule_idempotency_conflict",
+      "operation": "schedules.create",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "max_items": 100,
+        "every": "day",
+        "at_utc": "06:30",
+        "name": "Daily GitHub topics",
+        "idempotency_key": "daily-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/schedules",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "daily-1",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "api_id": "generated_047a8ebb25911ccf62f4a212",
+              "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "input": {},
+              "max_items": 100,
+              "every": "day",
+              "at_utc": "06:30",
+              "name": "Daily GitHub topics"
+            }
+          },
+          "response": {
+            "status": 409,
+            "json": {
+              "detail": {
+                "code": "schedule_idempotency_conflict",
+                "message": "That idempotency_key made a different schedule. Use a new key for another one."
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "idempotency_conflict",
+          "status_code": 409,
+          "code": "schedule_idempotency_conflict"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "schedules_create_generates_key",
+      "title": "schedules.create without a key generates one and sends it as the header",
+      "operation": "schedules.create",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "max_items": 100,
+        "every": "day",
+        "at_utc": "06:30",
+        "name": "Daily GitHub topics"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/schedules",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "api_id": "generated_047a8ebb25911ccf62f4a212",
+              "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "input": {},
+              "max_items": 100,
+              "every": "day",
+              "at_utc": "06:30",
+              "name": "Daily GitHub topics"
+            }
+          },
+          "response": {
+            "status": 201,
+            "headers": {
+              "Location": "/v1/schedules/0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+            },
+            "json": {
+              "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+              "name": "Daily GitHub topics",
+              "state": "active",
+              "pause_reason": null,
+              "target": {
+                "api_id": "generated_047a8ebb25911ccf62f4a212",
+                "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search"
+              },
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "pinned_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "input": {},
+              "fields": null,
+              "max_items": 100,
+              "timeout_seconds": 10800,
+              "cadence": {
+                "every": "day",
+                "at_utc": "06:30"
+              },
+              "next_due_at": "2026-11-21T06:30:00+00:00",
+              "last_slot_at": null,
+              "last_run_id": null,
+              "last_status": null,
+              "consecutive_failures": 0,
+              "skipped_slots": 0,
+              "last_skip_reason": null,
+              "consecutive_skips": 0,
+              "deferred_reason": null,
+              "last_deferred_at": null,
+              "attention": [],
+              "created_at": "2026-11-20T05:30:00+00:00"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "generated_key": true,
+        "schedule": {
+          "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "schedules_list",
+      "title": "schedules.list returns the schedules",
+      "operation": "schedules.list",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {},
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/schedules",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "schedules": [
+                {
+                  "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+                  "name": "Daily GitHub topics",
+                  "state": "active",
+                  "pause_reason": null,
+                  "target": {
+                    "api_id": "generated_047a8ebb25911ccf62f4a212",
+                    "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search"
+                  },
+                  "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                  "pinned_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                  "input": {},
+                  "fields": null,
+                  "max_items": 100,
+                  "timeout_seconds": 10800,
+                  "cadence": {
+                    "every": "day",
+                    "at_utc": "06:30"
+                  },
+                  "next_due_at": "2026-11-21T06:30:00+00:00",
+                  "last_slot_at": null,
+                  "last_run_id": null,
+                  "last_status": null,
+                  "consecutive_failures": 0,
+                  "skipped_slots": 0,
+                  "last_skip_reason": null,
+                  "consecutive_skips": 0,
+                  "deferred_reason": null,
+                  "last_deferred_at": null,
+                  "attention": [],
+                  "created_at": "2026-11-20T05:30:00+00:00"
+                },
+                {
+                  "schedule_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "name": "Daily GitHub topics",
+                  "state": "paused",
+                  "pause_reason": "paused_by_customer",
+                  "target": {
+                    "api_id": "generated_047a8ebb25911ccf62f4a212",
+                    "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search"
+                  },
+                  "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                  "pinned_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                  "input": {},
+                  "fields": null,
+                  "max_items": 100,
+                  "timeout_seconds": 10800,
+                  "cadence": {
+                    "every": "day",
+                    "at_utc": "06:30"
+                  },
+                  "next_due_at": null,
+                  "last_slot_at": null,
+                  "last_run_id": null,
+                  "last_status": null,
+                  "consecutive_failures": 0,
+                  "skipped_slots": 0,
+                  "last_skip_reason": null,
+                  "consecutive_skips": 0,
+                  "deferred_reason": null,
+                  "last_deferred_at": null,
+                  "attention": [],
+                  "created_at": "2026-11-20T05:30:00+00:00"
+                }
+              ],
+              "limit": 50
+            }
+          }
+        }
+      ],
+      "expect": {
+        "schedules": [
+          {
+            "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+            "state": "active"
+          },
+          {
+            "schedule_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "state": "paused"
+          }
+        ],
+        "limit": 50,
+        "sleeps": []
+      }
+    },
+    {
+      "id": "schedules_get",
+      "title": "schedules.get reads one schedule",
+      "operation": "schedules.get",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/schedules/0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+              "name": "Daily GitHub topics",
+              "state": "active",
+              "pause_reason": null,
+              "target": {
+                "api_id": "generated_047a8ebb25911ccf62f4a212",
+                "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search"
+              },
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "pinned_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "input": {},
+              "fields": null,
+              "max_items": 100,
+              "timeout_seconds": 10800,
+              "cadence": {
+                "every": "day",
+                "at_utc": "06:30"
+              },
+              "next_due_at": "2026-11-21T06:30:00+00:00",
+              "last_slot_at": null,
+              "last_run_id": null,
+              "last_status": null,
+              "consecutive_failures": 0,
+              "skipped_slots": 0,
+              "last_skip_reason": null,
+              "consecutive_skips": 0,
+              "deferred_reason": null,
+              "last_deferred_at": null,
+              "attention": [],
+              "created_at": "2026-11-20T05:30:00+00:00"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "schedule": {
+          "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+          "state": "active"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "schedules_get_404",
+      "title": "An unknown or deleted schedule answers 404",
+      "operation": "schedules.get",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/schedules/0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 404,
+            "json": {
+              "detail": {
+                "code": "schedule_not_found",
+                "message": "No schedule of yours has that id."
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "not_found",
+          "status_code": 404,
+          "code": "schedule_not_found"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "schedules_pause",
+      "title": "schedules.pause returns the paused schedule and any inflight run id",
+      "operation": "schedules.pause",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/schedules/0a1b2c3d4e5f60718293a4b5c6d7e8f9/pause",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+              "name": "Daily GitHub topics",
+              "state": "paused",
+              "pause_reason": "paused_by_customer",
+              "target": {
+                "api_id": "generated_047a8ebb25911ccf62f4a212",
+                "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search"
+              },
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "pinned_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "input": {},
+              "fields": null,
+              "max_items": 100,
+              "timeout_seconds": 10800,
+              "cadence": {
+                "every": "day",
+                "at_utc": "06:30"
+              },
+              "next_due_at": null,
+              "last_slot_at": null,
+              "last_run_id": null,
+              "last_status": null,
+              "consecutive_failures": 0,
+              "skipped_slots": 0,
+              "last_skip_reason": null,
+              "consecutive_skips": 0,
+              "deferred_reason": null,
+              "last_deferred_at": null,
+              "attention": [],
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "inflight_run_id": "0123456789abcdef0123456789abcdef"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "schedule": {
+          "state": "paused",
+          "pause_reason": "paused_by_customer",
+          "inflight_run_id": "0123456789abcdef0123456789abcdef"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "schedules_resume",
+      "title": "schedules.resume returns the active schedule",
+      "operation": "schedules.resume",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/schedules/0a1b2c3d4e5f60718293a4b5c6d7e8f9/resume",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+              "name": "Daily GitHub topics",
+              "state": "active",
+              "pause_reason": null,
+              "target": {
+                "api_id": "generated_047a8ebb25911ccf62f4a212",
+                "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search"
+              },
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "pinned_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "input": {},
+              "fields": null,
+              "max_items": 100,
+              "timeout_seconds": 10800,
+              "cadence": {
+                "every": "day",
+                "at_utc": "06:30"
+              },
+              "next_due_at": "2026-11-21T06:30:00+00:00",
+              "last_slot_at": null,
+              "last_run_id": null,
+              "last_status": null,
+              "consecutive_failures": 0,
+              "skipped_slots": 0,
+              "last_skip_reason": null,
+              "consecutive_skips": 0,
+              "deferred_reason": null,
+              "last_deferred_at": null,
+              "attention": [],
+              "created_at": "2026-11-20T05:30:00+00:00"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "schedule": {
+          "state": "active"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "schedules_resume_not_paused_409",
+      "title": "Resuming an active schedule answers 409 schedule_not_paused",
+      "operation": "schedules.resume",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/schedules/0a1b2c3d4e5f60718293a4b5c6d7e8f9/resume",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 409,
+            "json": {
+              "detail": {
+                "code": "schedule_not_paused",
+                "message": "Only a paused schedule can be resumed."
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "api_status",
+          "status_code": 409,
+          "code": "schedule_not_paused"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "schedules_delete",
+      "title": "schedules.delete answers deleted",
+      "operation": "schedules.delete",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "DELETE",
+            "path": "/v1/schedules/0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+            "headers": {
+              "Authorization": "Bearer cw_test_key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+              "deleted": true
+            }
+          }
+        }
+      ],
+      "expect": {
+        "deleted": {
+          "schedule_id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+          "deleted": true
+        },
+        "sleeps": []
+      }
+    }
+  ]
+}

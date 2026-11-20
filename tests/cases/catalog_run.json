@@ -1,0 +1,1588 @@
+{
+  "group": "catalog_run",
+  "cases": [
+    {
+      "id": "catalog_run_200_bounded_is_usable",
+      "title": "A 200 with a bounded summary is complete and usable",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {
+          "sort": "desc_stars"
+        },
+        "idempotency_key": "test-key-1",
+        "max_items": 2
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {
+                "sort": "desc_stars"
+              },
+              "max_items": 2
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "Location": "/v1/runs/0123456789abcdef0123456789abcdef"
+            },
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                },
+                {
+                  "title": "repo-1",
+                  "url": "https://github.com/example/repo-1"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 2
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 2,
+                  "duplicates": 0
+                },
+                "units_charged": 2,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 2
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "usable": true,
+          "status_code": 200,
+          "idempotency_key": "$key",
+          "record_count": 2,
+          "run_id": "0123456789abcdef0123456789abcdef",
+          "stop_reason": "max_items",
+          "units_charged": 2
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "catalog_run_200_partial_is_not_usable",
+      "title": "A 200 with a partial summary is complete but not usable",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "partial",
+                "within_scope_passed": false,
+                "catalog_complete": false,
+                "records": 1
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "timeout",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 1,
+                  "duplicates": 0
+                },
+                "units_charged": 1,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 1
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "usable": false,
+          "status_code": 200,
+          "record_count": 1,
+          "stop_reason": "timeout"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "catalog_run_200_not_within_scope_is_not_usable",
+      "title": "A completed summary that did not pass its scope is not usable",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "completed",
+                "within_scope_passed": false,
+                "catalog_complete": false,
+                "records": 1
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "source_exhausted",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 1,
+                  "duplicates": 0
+                },
+                "units_charged": 1,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 1
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "usable": false
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "catalog_run_generated_key",
+      "title": "Without a key the client generates one, sends it and returns it",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {}
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 1
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 1,
+                  "duplicates": 0
+                },
+                "units_charged": 1,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 1
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "generated_key": true,
+        "result": {
+          "complete": true,
+          "idempotency_key": "$key"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "catalog_run_body_options",
+      "title": "Run options and a pinned major go into the body; deprecation headers are surfaced",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {
+          "topics": "python"
+        },
+        "idempotency_key": "test-key-1",
+        "max_items": 5,
+        "timeout_seconds": 3600,
+        "wait_seconds": 30,
+        "fields": [
+          "title",
+          "url"
+        ],
+        "nulls": true,
+        "version": 1
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {
+                "topics": "python"
+              },
+              "max_items": 5,
+              "timeout_seconds": 3600,
+              "wait_seconds": 30,
+              "fields": [
+                "title",
+                "url"
+              ],
+              "nulls": true,
+              "version": 1
+            }
+          },
+          "response": {
+            "status": 200,
+            "headers": {
+              "Deprecation": "@1795046400",
+              "Sunset": "Sun, 17 Jan 2027 00:00:00 GMT"
+            },
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                },
+                {
+                  "title": "repo-1",
+                  "url": "https://github.com/example/repo-1"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 2
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 2,
+                  "duplicates": 0
+                },
+                "units_charged": 2,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 2
+              },
+              "version": "1.1",
+              "version_requested": 1,
+              "rerouted": "sunset"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "version": "1.1",
+          "rerouted": "sunset",
+          "deprecation": "@1795046400",
+          "sunset": "Sun, 17 Jan 2027 00:00:00 GMT"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "catalog_run_202_then_poll_same_key",
+      "title": "A 202 is followed by GET /result with the same key after Retry-After; the POST is never resent",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1",
+        "max_items": 5
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {},
+              "max_items": 5
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Location": "/v1/runs/0123456789abcdef0123456789abcdef",
+              "Retry-After": "2"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "running",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 3,
+                "duplicates": 0
+              },
+              "units_charged": 3,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Retry-After": "3"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "running",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 4,
+                "duplicates": 0
+              },
+              "units_charged": 4,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                },
+                {
+                  "title": "repo-1",
+                  "url": "https://github.com/example/repo-1"
+                },
+                {
+                  "title": "repo-2",
+                  "url": "https://github.com/example/repo-2"
+                },
+                {
+                  "title": "repo-3",
+                  "url": "https://github.com/example/repo-3"
+                },
+                {
+                  "title": "repo-4",
+                  "url": "https://github.com/example/repo-4"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 5
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 5,
+                  "duplicates": 0
+                },
+                "units_charged": 5,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 5
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "usable": true,
+          "record_count": 5,
+          "idempotency_key": "$key",
+          "run_id": "0123456789abcdef0123456789abcdef"
+        },
+        "sleeps": [
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "id": "catalog_run_poll_uses_poll_after_seconds",
+      "title": "Without Retry-After the wait is run.poll_after_seconds, clamped to 1..60",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 202,
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "queued",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 7
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 202,
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "running",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 500
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 1
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 1,
+                  "duplicates": 0
+                },
+                "units_charged": 1,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 1
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true
+        },
+        "sleeps": [
+          7,
+          60
+        ]
+      }
+    },
+    {
+      "id": "catalog_run_poll_default_wait",
+      "title": "Without Retry-After or poll_after_seconds the wait is 30 seconds",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 202,
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "running",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              }
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 1
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 1,
+                  "duplicates": 0
+                },
+                "units_charged": 1,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 1
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true
+        },
+        "sleeps": [
+          30
+        ]
+      }
+    },
+    {
+      "id": "catalog_run_poll_409_result_not_available_is_pending",
+      "title": "A 409 result_not_available/complete/running on /result is pending, not an error: same key again",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Retry-After": "1"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "running",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 409,
+            "headers": {
+              "Retry-After": "5"
+            },
+            "json": {
+              "detail": {
+                "code": "result_not_available",
+                "message": "The result is not available yet. Retry with the same Idempotency-Key."
+              }
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 409,
+            "headers": {
+              "Retry-After": "4"
+            },
+            "json": {
+              "detail": {
+                "code": "result_not_complete",
+                "message": "The run has not finished yet. Retry with the same Idempotency-Key."
+              }
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                },
+                {
+                  "title": "repo-1",
+                  "url": "https://github.com/example/repo-1"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 2
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 2,
+                  "duplicates": 0
+                },
+                "units_charged": 2,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 2
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "usable": true
+        },
+        "sleeps": [
+          1,
+          5,
+          4
+        ]
+      },
+      "spec_note": "The current engine answers 202 while a run goes on; these 409 codes come from an older delivery path (FINDINGS.md, finding 6). Clients keep tolerating them."
+    },
+    {
+      "id": "catalog_run_wait_false_returns_without_polling",
+      "title": "wait=false asks the server not to hold the request (wait_seconds 0) and returns the 202 as an incomplete result",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1",
+        "wait": false
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {},
+              "wait_seconds": 0
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Retry-After": "30"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "queued",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": false,
+          "status_code": 202,
+          "run_id": "0123456789abcdef0123456789abcdef",
+          "idempotency_key": "$key"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "catalog_run_poll_timeout_returns_incomplete",
+      "title": "When the next wait would pass poll_timeout the client returns the incomplete result instead of sleeping",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1",
+        "poll_timeout_seconds": 5
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Retry-After": "30"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "running",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": false,
+          "status_code": 202,
+          "run_id": "0123456789abcdef0123456789abcdef"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "catalog_result_recovers_by_key",
+      "title": "catalog.result reads an earlier run by key (recovery after a timeout) and polls until it ends",
+      "operation": "catalog.result",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Retry-After": "2"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "running",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                },
+                {
+                  "title": "repo-1",
+                  "url": "https://github.com/example/repo-1"
+                },
+                {
+                  "title": "repo-2",
+                  "url": "https://github.com/example/repo-2"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 3
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 3,
+                  "duplicates": 0
+                },
+                "units_charged": 3,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 3
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "record_count": 3,
+          "idempotency_key": "$key"
+        },
+        "sleeps": [
+          2
+        ]
+      }
+    }
+  ]
+}

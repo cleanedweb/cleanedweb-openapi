@@ -1,0 +1,481 @@
+{
+  "group": "failed_runs",
+  "cases": [
+    {
+      "id": "failed_run_marker_on_run",
+      "title": "An error with error_code run_failed is a failed run: final for the key, not retried even on a retryable status",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 502,
+            "headers": {
+              "Location": "/v1/runs/0123456789abcdef0123456789abcdef"
+            },
+            "json": {
+              "detail": {
+                "code": "source_blocked",
+                "message": "The source refused access.",
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "error_code": "run_failed",
+                "replayed": false
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "server",
+          "status_code": 502,
+          "code": "source_blocked",
+          "run_failed": true,
+          "replayed": false,
+          "unsure": false,
+          "run_id": "0123456789abcdef0123456789abcdef",
+          "error_code": "run_failed"
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "failed_run_replayed_on_poll",
+      "title": "failed_run_replayed while polling /result is the same final failure, marked as a replay",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 202,
+            "headers": {
+              "Retry-After": "1"
+            },
+            "json": {
+              "run_id": "0123456789abcdef0123456789abcdef",
+              "surface": "rest_run",
+              "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+              "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+              "status": "running",
+              "stop_reason": null,
+              "created_at": "2026-11-20T05:30:00+00:00",
+              "started_at": "2026-11-20T05:30:01+00:00",
+              "finished_at": null,
+              "limits": {
+                "max_items": 25,
+                "timeout_seconds": 10800
+              },
+              "progress": {
+                "pages": 1,
+                "commits": 1,
+                "items": 0,
+                "duplicates": 0
+              },
+              "units_charged": 0,
+              "abort_requested": false,
+              "links": {
+                "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+              },
+              "poll_after_seconds": 30
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "GET",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/result",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key"
+            }
+          },
+          "response": {
+            "status": 503,
+            "headers": {
+              "Location": "/v1/runs/0123456789abcdef0123456789abcdef"
+            },
+            "json": {
+              "detail": {
+                "code": "source_blocked",
+                "message": "The source refused access.",
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "error_code": "failed_run_replayed",
+                "replayed": true
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "server",
+          "status_code": 503,
+          "run_failed": true,
+          "replayed": true,
+          "unsure": false,
+          "run_id": "0123456789abcdef0123456789abcdef",
+          "error_code": "failed_run_replayed"
+        },
+        "sleeps": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "failed_run_marker_on_429_is_not_retried",
+      "title": "A failed-run marker beats the retry rule even on 429",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 429,
+            "headers": {
+              "Retry-After": "1"
+            },
+            "json": {
+              "detail": {
+                "code": "x",
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "error_code": "run_failed",
+                "replayed": false
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "rate_limited",
+          "status_code": 429,
+          "run_failed": true
+        },
+        "sleeps": []
+      }
+    },
+    {
+      "id": "gateway_error_without_marker_is_unsure",
+      "title": "A 504 without a marker proves nothing: retried, and unsure when the retries run out",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 504,
+            "json": {
+              "detail": "Gateway Timeout"
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 504,
+            "json": {
+              "detail": "Gateway Timeout"
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 504,
+            "json": {
+              "detail": "Gateway Timeout"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "server",
+          "status_code": 504,
+          "run_failed": false,
+          "unsure": true,
+          "idempotency_key": "$key"
+        },
+        "sleeps": [
+          0.5,
+          1.0
+        ]
+      }
+    },
+    {
+      "id": "service_unavailable_503_retried_then_ok",
+      "title": "A 503 retries with the same key and the run is then accepted",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 503,
+            "json": {
+              "detail": {
+                "code": "runs_unavailable",
+                "message": "Run storage is unavailable. Try again shortly."
+              }
+            }
+          }
+        },
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "response": {
+            "status": 200,
+            "json": {
+              "records": [
+                {
+                  "title": "repo-0",
+                  "url": "https://github.com/example/repo-0"
+                }
+              ],
+              "summary": {
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "bounded",
+                "within_scope_passed": true,
+                "catalog_complete": false,
+                "records": 1
+              },
+              "metadata": {
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252"
+              },
+              "artifacts": [],
+              "traceId": null,
+              "run": {
+                "run_id": "0123456789abcdef0123456789abcdef",
+                "surface": "rest_run",
+                "source_id": "generated_047a8ebb25911ccf62f4a212_search",
+                "definition_version": "eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252",
+                "status": "finished",
+                "stop_reason": "max_items",
+                "created_at": "2026-11-20T05:30:00+00:00",
+                "started_at": "2026-11-20T05:30:01+00:00",
+                "finished_at": "2026-11-20T05:30:09+00:00",
+                "limits": {
+                  "max_items": 25,
+                  "timeout_seconds": 10800
+                },
+                "progress": {
+                  "pages": 1,
+                  "commits": 1,
+                  "items": 1,
+                  "duplicates": 0
+                },
+                "units_charged": 1,
+                "abort_requested": false,
+                "links": {
+                  "self": "/v1/runs/0123456789abcdef0123456789abcdef",
+                  "items": "/v1/runs/0123456789abcdef0123456789abcdef/items",
+                  "result": "/v1/runs/0123456789abcdef0123456789abcdef/result",
+                  "abort": "/v1/runs/0123456789abcdef0123456789abcdef/abort"
+                }
+              },
+              "delivery": {
+                "runId": "0123456789abcdef0123456789abcdef",
+                "chargeReceiptId": "0123456789abcdef0123456789abcdef",
+                "recordCount": 1
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "result": {
+          "complete": true,
+          "idempotency_key": "$key"
+        },
+        "sleeps": [
+          0.5
+        ]
+      }
+    },
+    {
+      "id": "connection_error_keeps_key",
+      "title": "A network failure raises a connection error that carries the idempotency key and is not retried blindly beyond max_retries",
+      "operation": "catalog.run",
+      "client": {
+        "api_key": "cw_test_key",
+        "max_retries": 2,
+        "max_retry_delay_seconds": 30
+      },
+      "args": {
+        "api_id": "generated_047a8ebb25911ccf62f4a212",
+        "endpoint_id": "generated_047a8ebb25911ccf62f4a212_search",
+        "input": {},
+        "idempotency_key": "test-key-1"
+      },
+      "exchanges": [
+        {
+          "request": {
+            "method": "POST",
+            "path": "/v1/catalog/public/apis/generated_047a8ebb25911ccf62f4a212/endpoints/generated_047a8ebb25911ccf62f4a212_search/run",
+            "headers": {
+              "Authorization": "Bearer cw_test_key",
+              "Idempotency-Key": "$key",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "input": {}
+            }
+          },
+          "network_error": "connection_reset"
+        }
+      ],
+      "expect": {
+        "error": {
+          "kind": "connection",
+          "unsure": true,
+          "idempotency_key": "$key"
+        },
+        "sleeps": []
+      },
+      "spec_note": "A transport failure is not retried by the client: the caller recovers with catalog.result and the same key."
+    }
+  ]
+}

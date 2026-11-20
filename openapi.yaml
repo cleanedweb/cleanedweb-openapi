@@ -1,0 +1,2585 @@
+openapi: 3.1.0
+info:
+  title: CleanedWeb public API
+  version: 0.1.0
+  summary: Run maintained web data APIs, read their records and recover safely.
+  description: |
+    CleanedWeb turns collections of public websites into maintained REST APIs. This document describes
+    the customer-facing surface only: the published catalog, runs, schedules and the source APIs of your
+    own workspace. Builder, admin, control and pipeline routes are not part of it.
+
+    **Private preview.** This repository is private and the document may change before the first public
+    release. See `FINDINGS.md` for every place where the documentation, the engine and the live service
+    disagree.
+
+    ## Origins
+
+    | Origin | Serves |
+    | --- | --- |
+    | `https://api.cleanedweb.com` | Every `/v1/` route below: catalog reads, runs, results, schedules and source APIs. This is the one origin an SDK needs. |
+    | `https://app.cleanedweb.com` | The console's no-key catalog reads under `/api/catalog/`. Same data as the catalog routes on the API origin. |
+    | `https://cleanedweb.com` | Static machine files of the catalog site (`/catalog/index.json`, `/catalog/{slug}/contract.json`). |
+
+    `https://broker.cleanedweb.com` is the acquisition broker, not the customer API. It has no `/v1/runs` or
+    `/v1/catalog/public` routes and refuses scoped customer keys (see `FINDINGS.md`, finding 1).
+
+    ## Authentication and scopes
+
+    Send an account API key as `Authorization: Bearer <key>`. A key has scopes:
+
+    | Scope | Permits |
+    | --- | --- |
+    | `read` | Source connection details, versions and contracts, schedules (list, get), catalog result recovery and filters. |
+    | `run` | Start runs, read runs, items and abort, create, pause, resume and delete schedules, read a catalog run's result by key. |
+    | `results` | Read run results (`/v1/runs/{run_id}/result`, `/v1/sources/{source_id}/runs/{run_id}`) and run lists. |
+
+    Each operation lists the scopes that open it in `x-scopes-any-of`. A key without the scope answers `403`.
+    Catalog reads (list, get, contract) need no key.
+
+    ## Idempotency and runs
+
+    Every run needs an `Idempotency-Key` (1 to 200 characters: letters, numbers, `.`, `_`, `:`, `-`). Save the
+    key before you send. The same key and request returns the same run: `202` while it runs, the final body
+    when it ended, the saved error when it failed (for seven days). Never send the POST again to wait: read
+    the result with the same key. A failed run is final for its key; use a new key to run again.
+
+    ## Errors
+
+    Every error body is `{"detail": ...}`. `detail` is a string, an object with a `code`, or a list of
+    validation issues. An error that marks a failed run carries `run_id`, `error_code`
+    (`run_failed` or `failed_run_replayed`) and `replayed` in `detail`, plus a `Location` header. An error
+    without that marker (a timeout, a gateway error, a `503`) does not show whether the run failed: keep the
+    key and read the result.
+  termsOfService: https://cleanedweb.com/legal/terms/
+  contact:
+    name: CleanedWeb
+    url: https://cleanedweb.com/contact/?utm_source=github&utm_medium=cleanedweb-openapi
+  license:
+    name: MIT
+    identifier: MIT
+  x-private-preview: true
+servers:
+  - url: https://api.cleanedweb.com
+    description: CleanedWeb API (catalog, runs, schedules, source APIs)
+tags:
+  - name: Catalog
+    description: Published APIs. Reading needs no key.
+  - name: Catalog runs
+    description: Run a published API and read its result.
+  - name: Runs
+    description: Read, list and abort any run you started.
+  - name: Source APIs
+    description: The private APIs of your own workspace.
+  - name: Schedules
+    description: Recurring catalog or source runs.
+  - name: Catalog site
+    description: Static machine files of the catalog site, no key.
+security:
+  - bearerAuth: []
+paths:
+  /v1/catalog/public/apis:
+    get:
+      operationId: listCatalogApis
+      tags: [Catalog]
+      summary: List published APIs
+      description: |
+        The published catalog, newest first. Needs no key. Offset paging reflects current content and is not a
+        snapshot across requests. The same list is served by `GET /api/catalog/apis` on the app origin.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Category'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: One page of published APIs.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogApiList'
+              example:
+                items:
+                  - api_id: generated_047a8ebb25911ccf62f4a212
+                    name: GitHub Topics Repositories
+                    short_description: Public GitHub repositories listed under a topic, with name, description, owner, stars and forks.
+                    category: uncategorized
+                    record_types: []
+                    countries: []
+                    languages: []
+                    tags: []
+                    limitations: []
+                    site:
+                      name: GitHub Topics Repositories
+                      domain: github.com
+                    endpoints:
+                      - endpoint_id: generated_047a8ebb25911ccf62f4a212_search
+                        name: Extract records
+                        description: Return records within the accepted scope.
+                        status: available
+                        acquisition: http
+                    health: unknown
+                    last_verified_at: null
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /v1/catalog/public/apis/{api_id}:
+    get:
+      operationId: getCatalogApi
+      tags: [Catalog]
+      summary: Get one published API
+      description: Adds each endpoint's `active_version`, `version`, `versions` and `changelog`. Needs no key.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ApiId'
+      responses:
+        '200':
+          description: The API.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogApi'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/catalog/public/apis/{api_id}/endpoints/{endpoint_id}/contract:
+    get:
+      operationId: getCatalogEndpointContract
+      tags: [Catalog]
+      summary: Read an endpoint's contract
+      description: |
+        The contract is generated from the exact saved definition that runs: `input_schema`, `output_schema`,
+        saved samples and the run request (`method`, `path`). Pass `version` to read a pinned major. Needs no key.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ApiId'
+        - $ref: '#/components/parameters/EndpointId'
+        - $ref: '#/components/parameters/ContractVersion'
+      responses:
+        '200':
+          description: The contract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /v1/catalog/public/apis/{api_id}/endpoints/{endpoint_id}/filters:
+    get:
+      operationId: describeCatalogEndpointFilters
+      tags: [Catalog]
+      summary: Describe an endpoint's category filters
+      description: |
+        For an endpoint that takes category `filters`: one live page read of the category vocabulary. Free (no
+        Units, nothing runs). `502` means the site did not serve the category page; retry. An endpoint without
+        category filters answers `404` with `category_filters_unavailable`. Not described in the public docs.
+      x-scopes-any-of: [run, read]
+      parameters:
+        - $ref: '#/components/parameters/ApiId'
+        - $ref: '#/components/parameters/EndpointId'
+        - name: category
+          in: query
+          required: false
+          description: A category from an earlier describe.
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          description: Words for what you want; alone, it suggests categories.
+          schema:
+            type: string
+        - name: filters
+          in: query
+          required: false
+          description: 'A JSON object text, such as `{"brand":"Leica"}`.'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Categories and filters with their allowed values.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+  /v1/catalog/public/apis/{api_id}/endpoints/{endpoint_id}/run:
+    post:
+      operationId: runCatalogEndpoint
+      tags: [Catalog runs]
+      summary: Run a catalog endpoint
+      description: |
+        Runs the endpoint's latest major, or the major the body pins with `version`. A run uses the Units of your
+        workspace: one per saved record, charged as pages are committed. You cannot choose the source or the owner.
+        Start with a small `max_items`.
+
+        `200` when the run ended within `wait_seconds` (default 90), `202` while it goes on. On `202` do not send the
+        POST again: read `getCatalogEndpointResult` with the same key after `Retry-After` seconds.
+      x-scopes-any-of: [run]
+      x-idempotent: true
+      parameters:
+        - $ref: '#/components/parameters/ApiId'
+        - $ref: '#/components/parameters/EndpointId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogRunRequest'
+            example:
+              input:
+                sort: desc_stars
+              max_items: 25
+              timeout_seconds: 3600
+              wait_seconds: 90
+      responses:
+        '200':
+          description: The run ended within `wait_seconds`, or its result is final.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Deprecation:
+              $ref: '#/components/headers/Deprecation'
+            Sunset:
+              $ref: '#/components/headers/Sunset'
+            Link:
+              $ref: '#/components/headers/Link'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResult'
+              example:
+                records:
+                  - title: web-scraping-google-sheets
+                    url: https://github.com/oxylabs/web-scraping-google-sheets
+                    description: Guide to Using Google Sheets for Basic Web Scraping
+                summary:
+                  source_id: generated_047a8ebb25911ccf62f4a212_search
+                  definition_version: eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252
+                  status: bounded
+                  within_scope_passed: true
+                  catalog_complete: false
+                  records: 1
+                metadata:
+                  definition_version: eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252
+                artifacts: []
+                traceId: null
+                run:
+                  run_id: 0123456789abcdef0123456789abcdef
+                  status: finished
+                  stop_reason: max_items
+                  units_charged: 1
+                delivery:
+                  runId: 0123456789abcdef0123456789abcdef
+                  chargeReceiptId: 0123456789abcdef0123456789abcdef
+                  recordCount: 1
+        '202':
+          $ref: '#/components/responses/RunAccepted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+  /v1/catalog/public/apis/{api_id}/endpoints/{endpoint_id}/result:
+    get:
+      operationId: getCatalogEndpointResult
+      tags: [Catalog runs]
+      summary: Read a catalog run's result by its idempotency key
+      description: |
+        Finds the run a catalog request started by its `Idempotency-Key` and answers as the run did: `202` with the
+        run object while it goes on, `200` with the final body when it ended, or the run's error. Never collects the
+        website again. Works after the API is unpublished or its version changes. A key unknown for the endpoint
+        answers `404` (`catalog_delivery_not_found`); a key reused for another endpoint or version answers `409`
+        (`delivery_identity_conflict`).
+      x-scopes-any-of: [run, read]
+      parameters:
+        - $ref: '#/components/parameters/ApiId'
+        - $ref: '#/components/parameters/EndpointId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Nulls'
+      responses:
+        '200':
+          description: The run ended.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Deprecation:
+              $ref: '#/components/headers/Deprecation'
+            Sunset:
+              $ref: '#/components/headers/Sunset'
+            Link:
+              $ref: '#/components/headers/Link'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResult'
+        '202':
+          $ref: '#/components/responses/RunAccepted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+  /v1/runs:
+    get:
+      operationId: listRuns
+      tags: [Runs]
+      summary: List your runs
+      description: Your runs, newest first. Pass `next_cursor` as `cursor` to read the next page. An unknown or repeated query parameter answers `422` with `run_list_query_invalid`.
+      x-scopes-any-of: [run, results]
+      parameters:
+        - name: source_id
+          in: query
+          required: false
+          description: Only runs of this source or catalog endpoint source.
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/RunStatus'
+        - name: cursor
+          in: query
+          required: false
+          description: The opaque `next_cursor` of the previous page.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 50
+      responses:
+        '200':
+          description: One page of runs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/runs/{run_id}:
+    get:
+      operationId: getRun
+      tags: [Runs]
+      summary: Read a run
+      description: The run object. Reading a run never collects the website again. A foreign or missing run answers `404`.
+      x-scopes-any-of: [run, results]
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+      responses:
+        '200':
+          description: The run.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/runs/{run_id}/items:
+    get:
+      operationId: listRunItems
+      tags: [Runs]
+      summary: Read the records committed so far
+      description: |
+        Items `[cursor, cursor + limit)`, readable while the run runs. `next_cursor` is null once the run ended and
+        every record was read. With `format=jsonl` each line is one record, and the answer carries `X-Run-Status` and,
+        while more can follow, `X-Next-Cursor` headers (the json format carries them too).
+      x-scopes-any-of: [run, results]
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+        - name: cursor
+          in: query
+          required: false
+          description: Position of the first record to read. Starts at `0`. Pass the returned `next_cursor` to continue.
+          schema:
+            type: string
+            pattern: '^[0-9]+$'
+            default: '0'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 100
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [json, jsonl]
+            default: json
+        - $ref: '#/components/parameters/Nulls'
+      responses:
+        '200':
+          description: One page of records.
+          headers:
+            X-Run-Status:
+              $ref: '#/components/headers/XRunStatus'
+            X-Next-Cursor:
+              $ref: '#/components/headers/XNextCursor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunItemsPage'
+              example:
+                run_id: 0123456789abcdef0123456789abcdef
+                items:
+                  - title: creeper
+                    url: https://github.com/z7r1k3/creeper
+                count: 1
+                next_cursor: '1'
+                run_status: running
+            application/x-ndjson:
+              schema:
+                type: string
+                description: One JSON record per line.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/runs/{run_id}/result:
+    get:
+      operationId: getRunResult
+      tags: [Runs]
+      summary: Read a run's result
+      description: |
+        `200` with the final body once the run ended, `202` with the run object while it goes on (header
+        `Retry-After`), or the run's error (a failed run carries the failed-run marker). Reading a result never
+        collects the website again.
+
+        Needs the `results` scope. A key with only `run` answers `403` here although it can read the run and its
+        items (`FINDINGS.md`, finding 2).
+      x-scopes-any-of: [results]
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/Nulls'
+      responses:
+        '200':
+          description: The run ended.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResult'
+        '202':
+          $ref: '#/components/responses/RunAccepted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/runs/{run_id}/abort:
+    post:
+      operationId: abortRun
+      tags: [Runs]
+      summary: Abort a run
+      description: '`202` with the run object while it stops, `200` if it had already ended. Records committed so far stay readable and charged.'
+      x-scopes-any-of: [run]
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+      responses:
+        '200':
+          description: The run had already ended.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '202':
+          description: The run is stopping.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/sources/{source_id}/run:
+    post:
+      operationId: runSource
+      tags: [Source APIs]
+      summary: Run one of your source APIs
+      description: |
+        Executes an accepted source definition. A run that ends within `wait_seconds` (default 90) answers `200` with
+        its records; a longer run answers `202` with the run object: read `getRunResult` (`links.result`) after
+        `Retry-After` seconds. There is no keyed result route for source runs.
+
+        Send `expected_version` (the full 64-character definition version) to guard against a changed definition, or
+        `definition_version` to select an accepted revision. Do not send both.
+
+        Use the origin from your source's connection details. Today that is `https://api.cleanedweb.com`.
+      x-scopes-any-of: [run]
+      x-idempotent: true
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceRunRequest'
+            example:
+              expected_version: eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252
+              input: {}
+              max_items: 25
+      responses:
+        '200':
+          description: The run ended within `wait_seconds`.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResult'
+        '202':
+          $ref: '#/components/responses/RunAccepted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+  /v1/sources/{source_id}/runs:
+    post:
+      operationId: startSourceRun
+      tags: [Source APIs]
+      summary: Start a source run without waiting
+      description: |
+        Takes the same headers and body as `runSource`, with `wait_seconds` defaulting to `0`. Answers with the run
+        object and a `Location` header: usually `202`, or `200` when the run already ended (a failed run included). A
+        replayed key adds `Idempotent-Replayed: true`. Background runs share one queue lane; `/run`, `/stream` and MCP
+        calls share another.
+      x-scopes-any-of: [run]
+      x-idempotent: true
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Required for a customer workspace run (it answers `422` `idempotency_key_required` without one). Send it on every call so a lost response can be recovered.
+          schema:
+            $ref: '#/components/schemas/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceRunRequest'
+      responses:
+        '200':
+          description: The run already ended; the body is the run object, not the records.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '202':
+          description: The run is queued or running.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/sources/{source_id}/stream:
+    post:
+      operationId: streamSourceRun
+      tags: [Source APIs]
+      summary: Stream a source run's records
+      description: |
+        Takes the same headers and body as `runSource` and answers newline-delimited JSON; every line has an
+        increasing `sequence`. First line `progress` (stage `running`, with the run), then `records` lines as pages are
+        committed, a `progress` heartbeat after 10 seconds without records, and a final `done` or `error` line. The
+        stream has no fixed time limit. Closing it leaves the run running; read it with `getRun`.
+      x-scopes-any-of: [run]
+      x-idempotent: true
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceRunRequest'
+      responses:
+        '200':
+          description: The event stream. A failed run ends it with an `error` line, not an HTTP error status.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/x-ndjson:
+              schema:
+                type: string
+                description: One `StreamEvent` JSON object per line.
+              example: |
+                {"type":"progress","stage":"running","run":{"run_id":"0123456789abcdef0123456789abcdef","status":"running"},"sequence":1}
+                {"type":"records","records":[{"title":"creeper"}],"definition_version":"eec683b9","sequence":2}
+                {"type":"done","summary":{"status":"completed"},"elapsedMs":4200,"sequence":3}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/sources/{source_id}/runs/{run_id}:
+    get:
+      operationId: getSourceRun
+      tags: [Source APIs]
+      summary: Read a source run's recorded details
+      description: 'The run''s recorded details: `run`, `results`, `billing` and `recovery`. Needs the `results` scope.'
+      x-scopes-any-of: [results]
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - $ref: '#/components/parameters/RunId'
+      responses:
+        '200':
+          description: The run detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceRunDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/sources/{source_id}/runs/{run_id}/result:
+    get:
+      operationId: getSourceRunResult
+      tags: [Source APIs]
+      summary: Read a source run's result
+      description: Same as `getRunResult` for a run of this source (a run of another source answers `404`). Needs the `results` scope.
+      x-scopes-any-of: [results]
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - $ref: '#/components/parameters/RunId'
+        - $ref: '#/components/parameters/Nulls'
+      responses:
+        '200':
+          description: The run ended.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResult'
+        '202':
+          $ref: '#/components/responses/RunAccepted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/sources/{source_id}/versions:
+    get:
+      operationId: listSourceVersions
+      tags: [Source APIs]
+      summary: List a source's definition versions
+      description: Revision history, newest first, with the accepted jobs behind each version.
+      x-scopes-any-of: [read]
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: One page of versions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceVersionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/sources/{source_id}/versions/{definition_version}/contract:
+    get:
+      operationId: getSourceVersionContract
+      tags: [Source APIs]
+      summary: Read the contract of one definition version
+      description: The published contract of an accepted immutable revision, with a ready-made run `request`.
+      x-scopes-any-of: [read]
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+        - name: definition_version
+          in: path
+          required: true
+          description: The full 64-character lowercase SHA-256 version.
+          schema:
+            type: string
+            pattern: '^[a-f0-9]{64}$'
+      responses:
+        '200':
+          description: The contract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceVersionContract'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/sources/{source_id}/connection:
+    get:
+      operationId: getSourceConnection
+      tags: [Source APIs]
+      summary: Read a source's connection details
+      description: |
+        The run request for the active definition: method, path, a body with `expected_version`, and fresh example
+        idempotency keys (fetching again creates new ones, so keep the one you use). The details carry paths only,
+        never an origin.
+      x-scopes-any-of: [read]
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+      responses:
+        '200':
+          description: The connection details.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceConnection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/sources/{source_id}/health:
+    get:
+      operationId: getSourceHealth
+      tags: [Source APIs]
+      summary: Read a source's health
+      description: |
+        Monitoring evidence for the active definition. No customer scope opens this route today: a scoped key
+        answers `403` (`FINDINGS.md`, finding 5). It is listed because the engine serves it on the API origin.
+      x-scopes-any-of: []
+      parameters:
+        - $ref: '#/components/parameters/SourceId'
+      responses:
+        '200':
+          description: The health report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiHealth'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/schedules:
+    post:
+      operationId: createSchedule
+      tags: [Schedules]
+      summary: Create a schedule
+      description: |
+        Runs a catalog endpoint (`api_id` and `endpoint_id`) or one of your sources (`source_id`) at a cadence of every
+        hour, day or week (UTC, at most once an hour). Each due slot starts an ordinary charged run. The creating key
+        stands behind it and must keep the `run` scope. A workspace holds at most 50 schedules.
+
+        The retry key is the `Idempotency-Key` header or the body's `idempotency_key`; send one. The same key and
+        arguments answer the same schedule (`200`, `Idempotent-Replayed: true`) and never create a second; another
+        request under the same key answers `409` `schedule_idempotency_conflict`. A deleted schedule is never revived.
+        Not described in the public docs, whose scheduling guide says there is no native endpoint.
+      x-scopes-any-of: [run]
+      x-idempotent: true
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: The retry key. Send it here or as `idempotency_key` in the body; if both are present they must match.
+          schema:
+            $ref: '#/components/schemas/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleCreate'
+            example:
+              api_id: generated_047a8ebb25911ccf62f4a212
+              endpoint_id: generated_047a8ebb25911ccf62f4a212_search
+              input: {}
+              max_items: 100
+              every: day
+              at_utc: '06:30'
+              name: Daily GitHub topics
+              idempotency_key: daily-github-topics-1
+      responses:
+        '200':
+          description: The key already made this schedule.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '201':
+          description: The schedule was created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      operationId: listSchedules
+      tags: [Schedules]
+      summary: List your schedules
+      description: The schedules of your workspace, paused ones included.
+      x-scopes-any-of: [read]
+      responses:
+        '200':
+          description: The schedules.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/schedules/{schedule_id}:
+    get:
+      operationId: getSchedule
+      tags: [Schedules]
+      summary: Read a schedule
+      x-scopes-any-of: [read]
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      responses:
+        '200':
+          description: The schedule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      operationId: deleteSchedule
+      tags: [Schedules]
+      summary: Delete a schedule
+      description: Deletes for good. A run a ticker was already starting is created and charged, and named as `inflight_run_id`.
+      x-scopes-any-of: [run]
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      responses:
+        '200':
+          description: The schedule is deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/schedules/{schedule_id}/pause:
+    post:
+      operationId: pauseSchedule
+      tags: [Schedules]
+      summary: Pause a schedule
+      description: No slot starts after this answer, except one a ticker was already starting (named as `inflight_run_id`).
+      x-scopes-any-of: [run]
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      responses:
+        '200':
+          description: The paused schedule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /v1/schedules/{schedule_id}/resume:
+    post:
+      operationId: resumeSchedule
+      tags: [Schedules]
+      summary: Resume a paused schedule
+      description: Resumes from now; slots missed while paused are counted in `skipped_slots`. Only a paused schedule can be resumed (`409` `schedule_not_paused`). The target is resolved again.
+      x-scopes-any-of: [run]
+      parameters:
+        - $ref: '#/components/parameters/ScheduleId'
+      responses:
+        '200':
+          description: The resumed schedule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/catalog/apis:
+    servers:
+      - url: https://app.cleanedweb.com
+        description: Console origin, no-key catalog reads
+    get:
+      operationId: listCatalogApisApp
+      tags: [Catalog]
+      summary: List published APIs (console origin)
+      description: |
+        The same list as `listCatalogApis`, served by the console. Needs no key. An unknown or repeated parameter, or
+        a value out of range, answers `422` with `invalid_catalog_query` (the API origin ignores unknown parameters).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Category'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: One page of published APIs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogApiList'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/catalog/apis/{api_id}:
+    servers:
+      - url: https://app.cleanedweb.com
+        description: Console origin, no-key catalog reads
+    get:
+      operationId: getCatalogApiApp
+      tags: [Catalog]
+      summary: Get one published API (console origin)
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ApiId'
+      responses:
+        '200':
+          description: The API.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogApi'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/catalog/apis/{api_id}/endpoints/{endpoint_id}/contract:
+    servers:
+      - url: https://app.cleanedweb.com
+        description: Console origin, no-key catalog reads
+    get:
+      operationId: getCatalogEndpointContractApp
+      tags: [Catalog]
+      summary: Read an endpoint's contract (console origin)
+      description: |
+        As `getCatalogEndpointContract`, plus `api_origin`: the origin to send the run to
+        (`https://api.cleanedweb.com`). The API origin's own contract leaves `api_origin` out.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ApiId'
+        - $ref: '#/components/parameters/EndpointId'
+        - $ref: '#/components/parameters/ContractVersion'
+      responses:
+        '200':
+          description: The contract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /catalog/index.json:
+    servers:
+      - url: https://cleanedweb.com
+        description: Catalog site, static files
+    get:
+      operationId: getCatalogIndex
+      tags: [Catalog site]
+      summary: Read the catalog index
+      description: Every listed API with its slug, source, key fields and run URL. Written from the same reviewed data as the pages. Needs no key.
+      security: []
+      responses:
+        '200':
+          description: The index.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogIndex'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /catalog/{slug}/contract.json:
+    servers:
+      - url: https://cleanedweb.com
+        description: Catalog site, static files
+    get:
+      operationId: getCatalogListingContract
+      tags: [Catalog site]
+      summary: Read a listing's contract file
+      description: The run request (`method`, `path`, full `url`, headers), `input_schema`, `output_schema`, saved examples and links of a listing. Its `output_schema` lists only the fields the catalog publishes. Needs no key.
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: The listing's slug from the index, for example `github-topics-repositories-api`.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The listing contract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingContract'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        An account API key. Keep it on your server. Send it only to the API origin. Scopes: `read`, `run`,
+        `results`; each operation lists what opens it in `x-scopes-any-of`.
+  parameters:
+    ApiId:
+      name: api_id
+      in: path
+      required: true
+      description: The API's `api_id` from the list.
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]+$'
+    EndpointId:
+      name: endpoint_id
+      in: path
+      required: true
+      description: The endpoint's `endpoint_id` from the API.
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]+$'
+    RunId:
+      name: run_id
+      in: path
+      required: true
+      description: 32 lowercase hexadecimal characters.
+      schema:
+        type: string
+        pattern: '^[a-f0-9]{32}$'
+    SourceId:
+      name: source_id
+      in: path
+      required: true
+      description: The identifier of one of your source APIs, from its connection details.
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9._-]+$'
+    ScheduleId:
+      name: schedule_id
+      in: path
+      required: true
+      description: 32 lowercase hexadecimal characters.
+      schema:
+        type: string
+        pattern: '^[a-f0-9]{32}$'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Required. A key you generate and save before you send. Reuse it only to recover the same request, and read
+        the result with the same key. Missing or invalid answers `422` `idempotency_key_required`.
+      schema:
+        $ref: '#/components/schemas/IdempotencyKey'
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Page size.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: Where the page starts. Offset paging reflects current content and is not a snapshot.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Query:
+      name: q
+      in: query
+      required: false
+      description: Searches the published inventory before paging.
+      schema:
+        type: string
+        maxLength: 200
+    Category:
+      name: category
+      in: query
+      required: false
+      description: Only APIs in this category.
+      schema:
+        $ref: '#/components/schemas/Category'
+    Sort:
+      name: sort
+      in: query
+      required: false
+      description: Most recently updated first, or by name.
+      schema:
+        type: string
+        enum: [updated, name]
+        default: updated
+    ContractVersion:
+      name: version
+      in: query
+      required: false
+      description: |
+        Read the contract of this major (an integer of at least 1) instead of the latest. An unknown major answers
+        `404` `catalog_version_not_found` with the majors that exist; a value that is not a whole number of at
+        least 1 answers `422` `catalog_version_invalid`.
+      schema:
+        type: integer
+        minimum: 1
+    Nulls:
+      name: nulls
+      in: query
+      required: false
+      description: '`true` sends every published field, with absent values as `null`. Any other value answers `422` `run_nulls_invalid`.'
+      schema:
+        type: string
+        enum: ['true', 'false']
+        default: 'false'
+  headers:
+    Location:
+      description: Where to read the run or schedule. Relative to the origin that answered (`/v1/runs/{run_id}`).
+      schema:
+        type: string
+    RetryAfter:
+      description: Seconds to wait before reading the result again. `30` on a run still going.
+      schema:
+        type: integer
+    IdempotentReplayed:
+      description: '`true` when the key already named this run or schedule.'
+      schema:
+        type: string
+        enum: ['true']
+    CacheControl:
+      description: '`no-store`.'
+      schema:
+        type: string
+    XRunStatus:
+      description: The run's status.
+      schema:
+        $ref: '#/components/schemas/RunStatus'
+    XNextCursor:
+      description: The cursor to continue with, present while more records can follow.
+      schema:
+        type: string
+    Deprecation:
+      description: |
+        Present when the major you pinned is deprecated, or was sunset and the call was rerouted. `@` and the Unix
+        epoch seconds (UTC) at which the major was deprecated (RFC 9745).
+      schema:
+        type: string
+        pattern: '^@[0-9]+$'
+    Sunset:
+      description: When the major stops answering, as an HTTP date. Left out when it has no sunset date.
+      schema:
+        type: string
+    Link:
+      description: 'The listing''s changelog: `<https://cleanedweb.com/catalog/API_ID#changelog>; rel="deprecation"`.'
+      schema:
+        type: string
+  responses:
+    RunAccepted:
+      description: |
+        The run is queued or still running. Not an error. Do not send the POST again: read the result after
+        `Retry-After` seconds.
+      headers:
+        Location:
+          $ref: '#/components/headers/Location'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+        Deprecation:
+          $ref: '#/components/headers/Deprecation'
+        Sunset:
+          $ref: '#/components/headers/Sunset'
+        Link:
+          $ref: '#/components/headers/Link'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Run'
+          example:
+            run_id: 0123456789abcdef0123456789abcdef
+            surface: rest_run
+            source_id: generated_047a8ebb25911ccf62f4a212_search
+            definition_version: eec683b95f337dcc63a3fb5bf1e23729fb71f6f719f51ea771c19345b5893252
+            status: running
+            stop_reason: null
+            created_at: '2026-11-20T05:30:00+00:00'
+            started_at: '2026-11-20T05:30:01+00:00'
+            finished_at: null
+            limits:
+              max_items: 25
+              timeout_seconds: 3600
+            progress:
+              pages: 1
+              commits: 1
+              items: 20
+              duplicates: 0
+            units_charged: 20
+            abort_requested: false
+            poll_after_seconds: 30
+            links:
+              self: /v1/runs/0123456789abcdef0123456789abcdef
+              items: /v1/runs/0123456789abcdef0123456789abcdef/items
+              result: /v1/runs/0123456789abcdef0123456789abcdef/result
+              abort: /v1/runs/0123456789abcdef0123456789abcdef/abort
+    Unauthorized:
+      description: No credential, or a key that is invalid, expired or revoked.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail: Unauthorized
+    Forbidden:
+      description: |
+        The key lacks the scope or the access, or is not tied to a workspace account. Typical details are
+        `Credential scope does not allow this operation` and `workspace_billing_identity_invalid`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: |
+        The API, endpoint, run, schedule or delivery was not found or is not accessible to the key. Codes include
+        `catalog_not_found`, `catalog_delivery_not_found`, `schedule_not_found` and `catalog_version_not_found`
+        (with `available`, the majors that exist).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail:
+              code: catalog_version_not_found
+              message: This API has no such version. The available versions are listed.
+              available: [1, 2]
+    PaymentRequired:
+      description: '`insufficient_units`: the balance cannot fund the run. `detail.required` and `detail.available` are decimal strings. Add credit, then send a new key if the run failed.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail:
+              code: insufficient_units
+              message: The workspace does not have enough Units for this request. Nothing was charged. Add Units in Billing and try again.
+              required: '25'
+              available: '3'
+    Conflict:
+      description: |
+        `usage_budget_exceeded`, `delivery_identity_conflict` (the key was reused for another request, endpoint
+        or version), `builder_definition_version_conflict` (the active definition differs from `expected_version`),
+        `result_not_available`, `result_not_complete` or `result_not_running` (with `Retry-After`; retry the same
+        key), `schedule_idempotency_conflict`, `schedule_not_paused` and `schedule_limit_reached`.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail:
+              code: delivery_identity_conflict
+              message: That Idempotency-Key was already used for a different request or API version. Use a new key.
+    UnprocessableEntity:
+      description: |
+        An input or run option the contract does not accept, or an invalid query. `detail` is an object with a
+        `code` (`run_option_invalid`, `idempotency_key_required`, `invalid_catalog_query`, `catalog_version_invalid`,
+        `run_fields_invalid`, `run_list_query_invalid`, `run_items_query_invalid`, `source_input_invalid`, ...) or,
+        for a plain FastAPI validation failure, a list of issues.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail:
+              code: run_option_invalid
+              option: max_items
+              minimum: 1
+              maximum: 1000000000000
+    RateLimited:
+      description: |
+        `engine_request_limited`: the request limit of the key's workspace was reached. `Retry-After` and
+        `detail.retry_after_seconds` say how long to wait. Retry with the same key.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            detail:
+              code: engine_request_limited
+              message: Request limit exceeded
+              retry_after_seconds: 12
+    BadGateway:
+      description: A gateway or upstream failure. Without a failed-run marker the run may have started; keep the key and read the result.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    GatewayTimeout:
+      description: A gateway timeout. Without a failed-run marker the run may have started; keep the key and read the result.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceUnavailable:
+      description: |
+        Billing could not be confirmed (`builder_billing_unavailable`), run storage did not answer (`runs_unavailable`),
+        or execution is unavailable. Retry later with the same key. A `503` is never an empty result set. A failed run
+        can also answer `5xx` with the failed-run marker: that is final.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    IdempotencyKey:
+      type: string
+      minLength: 1
+      maxLength: 200
+      pattern: '^[A-Za-z0-9._:-]+$'
+      examples:
+        - 72ad1b16-20ad-4ef4-a578-d8b893601d7e
+    Category:
+      type: string
+      enum:
+        - commerce
+        - real_estate
+        - jobs
+        - businesses_places
+        - news_content
+        - social_communities
+        - travel
+        - public_data
+        - web_search
+        - uncategorized
+    RunStatus:
+      type: string
+      enum: [queued, running, finished, failed, aborted]
+    Error:
+      type: object
+      description: Every error carries `detail`.
+      properties:
+        detail:
+          $ref: '#/components/schemas/ErrorDetail'
+      required: [detail]
+    ErrorDetail:
+      description: A string, an object with a `code`, or a list of validation issues.
+      oneOf:
+        - type: string
+        - $ref: '#/components/schemas/ErrorObject'
+        - type: array
+          items:
+            type: object
+            additionalProperties: true
+    ErrorObject:
+      type: object
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+          description: For example `insufficient_units`, `usage_budget_exceeded`, `delivery_identity_conflict`, `run_option_invalid`, `engine_request_limited`, `catalog_version_not_found`.
+        message:
+          type: string
+        classification:
+          type: string
+          description: On a source execution error.
+        retryable:
+          type: boolean
+          description: On a source execution error.
+        traceId:
+          type: string
+        retryAfterSeconds:
+          type: number
+          description: On a source execution error. The `Retry-After` header carries the same wait.
+        retry_after_seconds:
+          type: number
+          description: On `engine_request_limited`.
+        run_id:
+          type: string
+          description: The failed run, when the error is a failed run's.
+        error_code:
+          type: string
+          enum: [run_failed, failed_run_replayed]
+          description: Marks a failed run. `failed_run_replayed` answers a replay of the same key (resending the request or reading the result).
+        replayed:
+          type: boolean
+          description: Whether this answer replays the key. Present beside `error_code`.
+        required:
+          type: string
+          description: Units the run needs, on `insufficient_units` (a decimal string).
+        available:
+          description: On `insufficient_units`, the Units the balance has (a decimal string). On `catalog_version_not_found`, the majors that exist, oldest first.
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: integer
+        version:
+          type: string
+          description: The major that failed, on a pinned call.
+        version_requested:
+          type: integer
+        rerouted:
+          type: string
+          enum: [sunset]
+    CatalogSite:
+      type: object
+      properties:
+        name:
+          type: string
+        domain:
+          type: string
+        description:
+          type: string
+        icon_url:
+          type: [string, 'null']
+      required: [name, domain]
+    CatalogEndpointSummary:
+      type: object
+      properties:
+        endpoint_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          description: '`available` when you can run it.'
+        acquisition:
+          type: string
+        active_version:
+          type: string
+          description: The 64-character definition version a run uses. Only on a single API's answer.
+        version:
+          type: string
+          description: The newest minor of the latest major, for example `1.1`. Only on a listing that has versions.
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionRow'
+        changelog:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChangelogEntry'
+      required: [endpoint_id, name, status]
+    CatalogReliability:
+      type: object
+      description: Run outcome counts for the last `window_days` days.
+      properties:
+        window_days:
+          type: integer
+        runs:
+          type: integer
+        succeeded:
+          type: integer
+        last_run_at:
+          type: [number, 'null']
+    CatalogApi:
+      type: object
+      properties:
+        api_id:
+          type: string
+        name:
+          type: string
+        short_description:
+          type: string
+        category:
+          $ref: '#/components/schemas/Category'
+        record_types:
+          type: array
+          items:
+            type: string
+        countries:
+          type: array
+          items:
+            type: string
+          description: Empty means the coverage is unspecified, not worldwide.
+        languages:
+          type: array
+          items:
+            type: string
+          description: Empty means the coverage is unspecified.
+        tags:
+          type: array
+          items:
+            type: string
+        limitations:
+          type: array
+          items:
+            type: string
+          description: Read these before you rely on an API for a whole site.
+        visibility:
+          type: string
+        api_type:
+          type: string
+        site:
+          $ref: '#/components/schemas/CatalogSite'
+        endpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogEndpointSummary'
+        acquisition:
+          type: string
+        updated_at:
+          type: number
+          description: Unix epoch seconds (UTC).
+        health:
+          type: string
+          description: '`unknown` until a health contract reports evidence.'
+        last_verified_at:
+          type: [number, 'null']
+        reliability:
+          $ref: '#/components/schemas/CatalogReliability'
+      required: [api_id, name, short_description, category, site, endpoints]
+    CatalogApiList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogApi'
+      required: [items]
+    VersionRow:
+      type: object
+      properties:
+        major:
+          type: integer
+          minimum: 1
+        latest_minor:
+          type: string
+        status:
+          type: string
+          enum: [current, deprecated, sunset]
+        sunset_at:
+          type: [string, 'null']
+      required: [major, status]
+    ChangelogEntry:
+      type: object
+      additionalProperties: true
+      properties:
+        version:
+          type: string
+        date:
+          type: string
+        kind:
+          type: string
+          description: '`major` for a new major; otherwise `minor`.'
+        changes:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    SavedExample:
+      type: object
+      properties:
+        kind:
+          type: string
+        definition_version:
+          type: string
+        saved_at:
+          type: number
+          description: When the sample was saved, Unix epoch seconds (UTC). It is not the time of your next run.
+        request:
+          type: object
+          additionalProperties: true
+        records:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        live_verified:
+          type: boolean
+    Contract:
+      type: object
+      description: The contract of one endpoint, generated from the saved definition that runs.
+      properties:
+        endpoint_id:
+          type: string
+        definition_version:
+          type: string
+          description: The immutable 64-character version a run uses. You select a major with `version`, not this.
+        updated_at:
+          type: number
+        method:
+          type: string
+          enum: [POST]
+        path:
+          type: string
+          description: The run request path. Send it to the API origin.
+        operation_type:
+          type: string
+        acquisition:
+          type: string
+        input_schema:
+          type: object
+          description: JSON Schema for `input`. Its `required` array lists the inputs you must send.
+          additionalProperties: true
+        output_schema:
+          type: object
+          description: JSON Schema for each record.
+          additionalProperties: true
+        parameters:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        examples:
+          type: array
+          items:
+            $ref: '#/components/schemas/SavedExample'
+        authentication:
+          type: string
+        limits:
+          description: Build-time metadata, not the bounds of a run.
+        pagination:
+          description: Build-time metadata. Can be null.
+        billing:
+          description: Can be null.
+        api_origin:
+          type: string
+          description: Only on the console origin's contract. The origin to send runs to.
+        version:
+          type: string
+          description: The major and its newest minor, for example `2.3`. Only on a listing that has versions.
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionRow'
+        changelog:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChangelogEntry'
+        version_requested:
+          type: integer
+        rerouted:
+          type: string
+          enum: [sunset]
+      required: [endpoint_id, definition_version, method, path, input_schema, output_schema]
+    CatalogIndex:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+        count:
+          type: integer
+        updated:
+          type: string
+        live:
+          description: The live list address.
+        links:
+          type: object
+          additionalProperties: true
+        sites:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        apis:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogIndexEntry'
+      required: [apis]
+    CatalogIndexEntry:
+      type: object
+      properties:
+        name:
+          type: string
+        api_id:
+          type: string
+        slug:
+          type: string
+        url:
+          type: string
+        description:
+          type: string
+        source:
+          type: object
+          additionalProperties: true
+        category:
+          type: string
+        key_fields:
+          type: array
+          items:
+            type: string
+        updated:
+          type: string
+        markdown:
+          type: string
+        contract:
+          type: string
+        endpoints:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              endpoint_id:
+                type: string
+              name:
+                type: string
+              major:
+                type: integer
+              run:
+                type: string
+                description: The full run URL, on the API origin.
+      required: [api_id, slug]
+    ListingContract:
+      type: object
+      additionalProperties: true
+      properties:
+        name:
+          type: string
+        api_id:
+          type: string
+        slug:
+          type: string
+        source:
+          type: object
+          additionalProperties: true
+        category:
+          type: string
+        limitations:
+          type: array
+          items:
+            type: string
+        version:
+          type: string
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionRow'
+        endpoints:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              endpoint_id:
+                type: string
+              definition_version:
+                type: string
+              method:
+                type: string
+              path:
+                type: string
+              url:
+                type: string
+                description: The full run URL, on the API origin.
+              input_schema:
+                type: object
+                additionalProperties: true
+              output_schema:
+                type: object
+                additionalProperties: true
+        links:
+          type: object
+          additionalProperties: true
+      required: [api_id, endpoints]
+    RunOptions:
+      type: object
+      description: Options common to every run request.
+      properties:
+        max_items:
+          type: integer
+          minimum: 1
+          description: Stop after this many de-duplicated records.
+        timeout_seconds:
+          type: integer
+          minimum: 60
+          maximum: 86400
+          default: 10800
+          description: 'The run''s own time budget, counted from when it starts running. Part of the request identity: changing it with the same key answers `409` `delivery_identity_conflict`.'
+        wait_seconds:
+          type: integer
+          minimum: 0
+          maximum: 86400
+          default: 90
+          description: How long this request waits for the run to end before answering `202`. It does not change the run and is not part of the request identity.
+        fields:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          uniqueItems: true
+          description: Return only these published output fields; required and identity fields are always kept.
+        nulls:
+          type: boolean
+          default: false
+          description: Send every published field, with absent values as `null`. Not part of the request identity.
+    CatalogRunRequest:
+      description: Only the listed fields are accepted; any other field is rejected.
+      allOf:
+        - $ref: '#/components/schemas/RunOptions'
+        - type: object
+          properties:
+            input:
+              type: object
+              additionalProperties: true
+              description: The inputs from the contract. Unknown inputs are rejected.
+            version:
+              type: integer
+              minimum: 1
+              description: The major to run. Leave it out for the latest major. A sunset major runs on the latest major and the response says `rerouted`.
+    SourceRunRequest:
+      description: Do not combine `expected_version` and `definition_version`, including a null value.
+      allOf:
+        - $ref: '#/components/schemas/RunOptions'
+        - type: object
+          properties:
+            input:
+              type: object
+              additionalProperties: true
+              description: Inputs accepted by the source's generated contract.
+            expected_version:
+              type: string
+              pattern: '^[a-f0-9]{64}$'
+              description: Require the active definition to match this version.
+            definition_version:
+              type: string
+              pattern: '^[a-f0-9]{64}$'
+              description: Select an accepted immutable revision explicitly.
+            endpoint:
+              type: string
+              description: Optional; the supported value is `search`.
+    RunProgress:
+      type: object
+      properties:
+        pages:
+          type: integer
+        commits:
+          type: integer
+        items:
+          type: integer
+          description: Committed records.
+        duplicates:
+          type: integer
+          description: Repeated records dropped.
+    RunLinks:
+      type: object
+      properties:
+        self:
+          type: string
+        items:
+          type: string
+        result:
+          type: string
+        abort:
+          type: string
+    Run:
+      type: object
+      description: The run object.
+      properties:
+        run_id:
+          type: string
+        surface:
+          type: string
+          description: How the run was started (`rest_run`, `rest_stream`, `async_run`, `mcp_call`).
+        source_id:
+          type: string
+        definition_version:
+          type: string
+        status:
+          $ref: '#/components/schemas/RunStatus'
+        stop_reason:
+          type: [string, 'null']
+          description: |
+            Why the run ended; null while it runs. Known values: `source_exhausted`, `scope_end`, `series_unfilled`,
+            `end_not_confirmed`, `max_items`, `timeout`, `budget_exhausted`, `aborted`, `blocked`, `error`. Treat an
+            unknown value as an ended run and keep it.
+        created_at:
+          type: [string, 'null']
+        started_at:
+          type: [string, 'null']
+        finished_at:
+          type: [string, 'null']
+        limits:
+          type: object
+          additionalProperties: true
+          properties:
+            max_items:
+              type: [integer, 'null']
+            timeout_seconds:
+              type: integer
+        progress:
+          $ref: '#/components/schemas/RunProgress'
+        units_charged:
+          type: number
+        abort_requested:
+          type: boolean
+        error:
+          type: object
+          description: 'On failure: `code`, `status`, `detail` and an optional `retry_after`.'
+          additionalProperties: true
+        connection_id:
+          type: string
+        session:
+          type: string
+        poll_after_seconds:
+          type: number
+          description: Present while the run is queued or running.
+        links:
+          $ref: '#/components/schemas/RunLinks'
+        version:
+          type: string
+          description: 'The version that ran, on a catalog run: the major and its newest minor.'
+        version_requested:
+          type: integer
+        rerouted:
+          type: string
+          enum: [sunset]
+      required: [run_id, status]
+    RunList:
+      type: object
+      properties:
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        next_cursor:
+          type: [string, 'null']
+      required: [runs]
+    RunItemsPage:
+      type: object
+      properties:
+        run_id:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        count:
+          type: integer
+          description: The number of records in this page.
+        next_cursor:
+          type: [string, 'null']
+          description: The cursor for the next page. Null once the run ended and every record was read.
+        run_status:
+          $ref: '#/components/schemas/RunStatus'
+      required: [run_id, items, count, next_cursor, run_status]
+    Summary:
+      type: object
+      additionalProperties: true
+      properties:
+        source_id:
+          type: string
+        definition_version:
+          type: string
+        status:
+          type: string
+          enum: [completed, bounded, partial]
+          description: '`completed` and `bounded` with `within_scope_passed` true are usable. `bounded` and `partial` mean the source can hold more records.'
+        within_scope_passed:
+          type: boolean
+        catalog_complete:
+          type: boolean
+          description: A run does not establish full-catalog coverage; the generated contract reports `false`.
+        records:
+          type: integer
+    Delivery:
+      type: object
+      description: Present for a customer workspace run.
+      properties:
+        runId:
+          type: string
+        chargeReceiptId:
+          type: string
+          description: The same identifier as `runId`.
+        recordCount:
+          type: integer
+    RunResult:
+      type: object
+      description: A run that ended. Check `summary.status` is `completed` or `bounded` and `summary.within_scope_passed` is true before you use the records.
+      properties:
+        records:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        summary:
+          $ref: '#/components/schemas/Summary'
+        metadata:
+          type: object
+          additionalProperties: true
+          properties:
+            definition_version:
+              type: string
+        artifacts:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        traceId:
+          type: [string, 'null']
+        run:
+          $ref: '#/components/schemas/Run'
+        delivery:
+          $ref: '#/components/schemas/Delivery'
+        version:
+          type: string
+        version_requested:
+          type: integer
+        rerouted:
+          type: string
+          enum: [sunset]
+      required: [records, summary, run]
+    SourceRunDetail:
+      type: object
+      properties:
+        contract_version:
+          type: string
+          examples:
+            - builder-run-detail-v1
+        run:
+          type: object
+          additionalProperties: true
+        results:
+          type: object
+          additionalProperties: true
+          description: '`state` is one of `available`, `executing`, `pending_settlement`, `failed`, `not_retained`, `unavailable`.'
+        billing:
+          type: object
+          additionalProperties: true
+        recovery:
+          type: object
+          additionalProperties: true
+      required: [run, results, billing]
+    SourceVersionList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              source_id:
+                type: string
+              version:
+                type: string
+              status:
+                type: string
+                enum: [active, previously_activated, inactive_candidate, activation_unknown]
+              created_at:
+                type: number
+              jobs:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+        next_cursor:
+          type: [string, 'null']
+        consistency:
+          type: string
+      required: [items]
+    SourceVersionContract:
+      type: object
+      additionalProperties: true
+      properties:
+        schema_version:
+          type: integer
+        source_id:
+          type: string
+        definition_version:
+          type: string
+        output_version:
+          type: string
+        limits:
+          type: object
+          additionalProperties: true
+        openapi:
+          type: object
+          description: An OpenAPI document for this version's run request and records.
+          additionalProperties: true
+        request:
+          type: object
+          additionalProperties: true
+          properties:
+            method:
+              type: string
+            path:
+              type: string
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+            body:
+              type: object
+              additionalProperties: true
+      required: [source_id, definition_version, openapi, request]
+    SourceConnection:
+      type: object
+      additionalProperties: true
+      properties:
+        source_id:
+          type: string
+        definition_version:
+          type: string
+        rest:
+          type: object
+          properties:
+            method:
+              type: string
+              enum: [POST]
+            path:
+              type: string
+              description: A path, never an origin.
+            body:
+              type: object
+              additionalProperties: true
+            headers:
+              type: object
+              properties:
+                Idempotency-Key:
+                  type: string
+            curl:
+              type: string
+        mcp:
+          type: object
+          additionalProperties: true
+        authentication:
+          type: string
+        idempotency:
+          type: object
+          additionalProperties: true
+      required: [source_id, definition_version, rest]
+    ApiHealth:
+      type: object
+      additionalProperties: true
+      properties:
+        source_id:
+          type: string
+        definition_version:
+          type: string
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy, unknown, stale, never_checked]
+        checked_at:
+          type: [number, 'null']
+        fresh_until:
+          type: [number, 'null']
+        monitoring_overdue:
+          type: boolean
+        records_observed:
+          type: [integer, 'null']
+        incidents:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        evidence:
+          type: object
+          additionalProperties: true
+      required: [source_id, definition_version, status, evidence]
+    Cadence:
+      type: object
+      properties:
+        every:
+          type: string
+          enum: [hour, day, week]
+        at_utc:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: UTC time of day, `HH:MM` (for `hour`, the minute past each hour). Default `00:00`.
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: For `week`, the day, 0 Monday to 6 Sunday. Default Monday.
+      required: [every]
+    ScheduleCreate:
+      type: object
+      description: Give `api_id` and `endpoint_id` (a catalog API), or `source_id` (one of your own); not both.
+      additionalProperties: false
+      properties:
+        api_id:
+          type: string
+          pattern: '^[A-Za-z0-9_-]+$'
+        endpoint_id:
+          type: string
+          pattern: '^[A-Za-z0-9_-]+$'
+        source_id:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+          description: The major of a catalog API to schedule; default the listing's current one.
+        input:
+          type: object
+          additionalProperties: true
+          description: The API's inputs. Every required input is given now; each slot runs with them.
+        fields:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+          uniqueItems: true
+        max_items:
+          type: integer
+          minimum: 1
+        timeout_seconds:
+          type: integer
+          minimum: 60
+          maximum: 86400
+          default: 10800
+        every:
+          type: string
+          enum: [hour, day, week]
+        at_utc:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+        run_now:
+          type: boolean
+          description: Also run once at the next tick, not only from the next slot.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 200
+          pattern: '^[A-Za-z0-9._:-]+$'
+          description: Required unless sent as the `Idempotency-Key` header.
+      required: [every]
+    Schedule:
+      type: object
+      additionalProperties: true
+      properties:
+        schedule_id:
+          type: string
+        name:
+          type: [string, 'null']
+        state:
+          type: string
+          enum: [active, paused]
+        pause_reason:
+          type: [string, 'null']
+          description: For example `paused_by_customer`, `key_revoked`, `insufficient_units`, `consecutive_failures`, `version_changed`.
+        target:
+          type: object
+          description: '`api_id` and `endpoint_id`, or `source_id`.'
+          additionalProperties: true
+        source_id:
+          type: [string, 'null']
+        pinned_version:
+          type: [string, 'null']
+        input:
+          type: object
+          additionalProperties: true
+        fields:
+          type: [array, 'null']
+          items:
+            type: string
+        max_items:
+          type: [integer, 'null']
+        timeout_seconds:
+          type: integer
+        cadence:
+          $ref: '#/components/schemas/Cadence'
+        next_due_at:
+          type: [string, 'null']
+        last_slot_at:
+          type: [string, 'null']
+        last_run_id:
+          type: [string, 'null']
+        last_status:
+          type: [string, 'null']
+        consecutive_failures:
+          type: integer
+        skipped_slots:
+          type: integer
+        last_skip_reason:
+          type: [string, 'null']
+        consecutive_skips:
+          type: integer
+        deferred_reason:
+          type: [string, 'null']
+        last_deferred_at:
+          type: [string, 'null']
+        attention:
+          type: array
+          items:
+            type: string
+            enum: [deferred, overdue, previous_run_stuck]
+        created_at:
+          type: string
+        paused_at:
+          type: string
+        inflight_run_id:
+          type: [string, 'null']
+          description: On a pause answer, the run a ticker was already starting.
+        replayed:
+          type: boolean
+      required: [schedule_id, state, cadence]
+    ScheduleList:
+      type: object
+      properties:
+        schedules:
+          type: array
+          items:
+            $ref: '#/components/schemas/Schedule'
+        limit:
+          type: integer
+          description: The most schedules a workspace holds.
+      required: [schedules]
+    ScheduleDeleted:
+      type: object
+      properties:
+        schedule_id:
+          type: string
+        deleted:
+          type: boolean
+        inflight_run_id:
+          type: [string, 'null']
+      required: [schedule_id, deleted]
