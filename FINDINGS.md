@@ -9,7 +9,7 @@ by number.
 **Status 2026-11-20:** findings 2, 5 and 10 are fixed in the engine at `577f32222e`, released and live:
 `/openapi.json` and `/docs` answer `404`, and source health answers `200` to a `read` key (live run below).
 Findings 1, 3, 4, 6, 7, 8, 9 and 11 are fixed in the site docs and are live. The SDKs default to
-`https://api.cleanedweb.com`. Findings 12 to 15 come from the live run and are documented in `openapi.yaml`.
+`https://api.cleanedweb.com`. Findings 12 to 16 come from the live runs and are documented in `openapi.yaml`.
 
 ## 1. The API origin is `https://api.cleanedweb.com`, not the broker
 
@@ -114,7 +114,9 @@ including admin, control and pipeline-suite routes. Most response schemas are `{
 
 An endpoint without category filters answers `404`
 `{"error": {"code": "category_filters_unavailable", "details": {"reason": "no_category_filters_evidence"}, "message": ...}}`;
-every other route wraps errors in `detail`. SDKs that read only `detail` lose the code.
+every other route wraps errors in `detail`. SDKs that read only `detail` lose the code. The same envelope carries
+a `category` the site does not know (`404` `category_filters_unavailable`, reason `filter_list_not_found`, the message
+still says the API has no category filters) and a `filters` value that is not a JSON object (`422` `filters_invalid`).
 
 ## 13. A refused run input is a failed run, not a validation error
 
@@ -138,6 +140,14 @@ characters, so the path is no customer route at all.
 - A finished, bounded run read through `getSourceRun` reports `run.outcome: partial` and
   `recovery.state: unconfirmed`.
 
+## 16. An aborted run's result reads as usable
+
+Aborting a queued run answers `200` at once with `status: aborted` and `units_charged: 0` (not `202`). Its
+`GET /v1/runs/{id}/result` then answers `200` with no records and `summary.status: bounded`,
+`summary.within_scope_passed: true`: the pair the docs and the SDKs treat as usable. A caller that checks only the
+summary takes an empty, aborted run for a complete bounded one. The engine should report the abort in
+`summary.status` (or the SDKs should also require `run.status: finished`). The spec says to check `run.status`.
+
 ## Live run 2026-11-20
 
 One small run (RubyGems gem search, `max_items` 3) through each client on a customer key with the `read`,
@@ -151,5 +161,18 @@ observed: `401` (`{"detail": "Unauthorized"}`), `404` (`catalog_not_found`, `Run
 replays `200`; `schedule_idempotency_conflict`, `schedule_not_paused`). Schedule create (`201`), replay
 (`200`, `Idempotent-Replayed: true`), pause, delete and get-after-delete (`404`) match the spec.
 
-Still not observed: `402`, `429`, `5xx`, a source run, `/stream`, `abortRun`, `/filters` for an endpoint
-that has category filters, and finding 2 with a key that has `run` but not `results`.
+Second pass, same day and key (raw captures `s_*`, `a_*`, `f*` in the run's operations folder): the account's own
+source `generated_b4994166c5cfc78e99c910e7` with `max_items` 3.
+
+- `runSource`: `200` with 3 records, `run.stop_reason: max_items`, `units_charged: 3`, `delivery`, `Location`.
+- `streamSourceRun`: `200` `application/x-ndjson` with `Location`; lines `progress` (run `status: queued`),
+  `records` (3), `done` (`summary`, `run`, `delivery`, `elapsedMs`), `sequence` 1 to 3. 3 Units.
+- `startSourceRun`: `202` with the run, `poll_after_seconds: 30`. `abortRun` while queued: `200` `aborted`, nothing
+  charged (finding 16); again: `200`, unchanged. A run that had finished: `200` `finished`. An unknown run: `404`
+  `Run not found`. The window between `queued` and `finished` was under a second, so a `202` abort was not seen.
+- `/filters` on Tori.fi (`generated_59d3c28862b88d7b702b71de_search`): `200` for describe, `search` and `category`;
+  `404` for an unknown category and `422` for bad `filters` JSON, both in the `error` envelope (finding 12); `401`
+  without a key.
+
+Still not observed: `402` and `429` (only by draining credit or flooding production), `5xx`, a `202` abort, and
+finding 2 with a key that has `run` but not `results` (needs a new key).

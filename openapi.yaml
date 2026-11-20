@@ -177,6 +177,9 @@ paths:
         Units, nothing runs). `502` means the site did not serve the category page; retry. An endpoint without
         category filters answers `404` with `category_filters_unavailable`, in a different envelope from every other
         error: `{"error": {"code", "message", "details"}}` instead of `{"detail": ...}` (`FINDINGS.md`, finding 12).
+        The same envelope carries a `category` the site does not know (`404` `category_filters_unavailable`, reason
+        `filter_list_not_found`) and a `filters` value that is not a JSON object (`422` `filters_invalid`). A `200`
+        has `category` (`value`, `label`, `path`, `children` with `count`), `filters`, `total`, `as_of` and `source`.
         Not described in the public docs.
       x-scopes-any-of: [run, read]
       parameters:
@@ -518,7 +521,7 @@ paths:
       description: |
         `200` with the final body once the run ended, `202` with the run object while it goes on (header
         `Retry-After`), or the run's error (a failed run carries the failed-run marker). Reading a result never
-        collects the website again.
+        collects the website again. An aborted run answers `200` too: check `run.status` (`FINDINGS.md`, finding 16).
 
         Needs the `run` or `results` scope (`FINDINGS.md`, finding 2).
       x-scopes-any-of: [run, results]
@@ -549,7 +552,10 @@ paths:
       operationId: abortRun
       tags: [Runs]
       summary: Abort a run
-      description: '`202` with the run object while it stops, `200` if it had already ended. Records committed so far stay readable and charged.'
+      description: |
+        `202` with the run object while it stops, `200` if it had already ended. A run still `queued` stops at once:
+        `200` with `status: aborted`, nothing charged. Records committed so far stay readable and charged. The result
+        of an aborted run reads as `bounded` (`FINDINGS.md`, finding 16).
       x-scopes-any-of: [run]
       parameters:
         - $ref: '#/components/parameters/RunId'
@@ -707,7 +713,8 @@ paths:
       summary: Stream a source run's records
       description: |
         Takes the same headers and body as `runSource` and answers newline-delimited JSON; every line has an
-        increasing `sequence`. First line `progress` (stage `running`, with the run), then `records` lines as pages are
+        increasing `sequence`. First line `progress` (stage `running`, with the run, whose `status` is usually still
+        `queued`), then `records` lines as pages are
         committed, a `progress` heartbeat after 10 seconds without records, and a final `done` or `error` line. The
         stream has no fixed time limit. Closing it leaves the run running; read it with `getRun`.
       x-scopes-any-of: [run]
@@ -2242,7 +2249,7 @@ components:
           type: integer
     RunResult:
       type: object
-      description: A run that ended. Check `summary.status` is `completed` or `bounded` and `summary.within_scope_passed` is true before you use the records.
+      description: A run that ended. Check `summary.status` is `completed` or `bounded` and `summary.within_scope_passed` is true before you use the records. An aborted run also reports `bounded` with `within_scope_passed` true, so check `run.status` is `finished` as well (`FINDINGS.md`, finding 16).
       properties:
         records:
           type: array
