@@ -620,8 +620,8 @@
       }
     },
     {
-      "id": "runs_result_run_only_key_is_forbidden",
-      "title": "A key with only the run scope answers 403 on /result: a typed permission error, not a retry loop",
+      "id": "runs_result_without_scope_is_forbidden",
+      "title": "A key without the run or results scope answers 403 on /result: a typed permission error, not a retry loop",
       "operation": "runs.result",
       "client": {
         "api_key": "cw_test_key",
@@ -655,7 +655,7 @@
         },
         "sleeps": []
       },
-      "spec_note": "FINDINGS.md finding 2: reading a result needs the results scope; the docs say run or results."
+      "spec_note": "FINDINGS.md finding 2: /result needs run or results (results only before engine 577f32222e)."
     },
     {
       "id": "runs_abort_202",

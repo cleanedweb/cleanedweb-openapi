@@ -175,7 +175,9 @@ paths:
       description: |
         For an endpoint that takes category `filters`: one live page read of the category vocabulary. Free (no
         Units, nothing runs). `502` means the site did not serve the category page; retry. An endpoint without
-        category filters answers `404` with `category_filters_unavailable`. Not described in the public docs.
+        category filters answers `404` with `category_filters_unavailable`, in a different envelope from every other
+        error: `{"error": {"code", "message", "details"}}` instead of `{"detail": ...}` (`FINDINGS.md`, finding 12).
+        Not described in the public docs.
       x-scopes-any-of: [run, read]
       parameters:
         - $ref: '#/components/parameters/ApiId'
@@ -518,9 +520,8 @@ paths:
         `Retry-After`), or the run's error (a failed run carries the failed-run marker). Reading a result never
         collects the website again.
 
-        Needs the `results` scope. A key with only `run` answers `403` here although it can read the run and its
-        items (`FINDINGS.md`, finding 2).
-      x-scopes-any-of: [results]
+        Needs the `run` or `results` scope (`FINDINGS.md`, finding 2).
+      x-scopes-any-of: [run, results]
       parameters:
         - $ref: '#/components/parameters/RunId'
         - $ref: '#/components/parameters/Nulls'
@@ -756,8 +757,8 @@ paths:
       operationId: getSourceRun
       tags: [Source APIs]
       summary: Read a source run's recorded details
-      description: 'The run''s recorded details: `run`, `results`, `billing` and `recovery`. Needs the `results` scope.'
-      x-scopes-any-of: [results]
+      description: 'The run''s recorded details: `run`, `results`, `billing` and `recovery`. Needs the `run` or `results` scope.'
+      x-scopes-any-of: [run, results]
       parameters:
         - $ref: '#/components/parameters/SourceId'
         - $ref: '#/components/parameters/RunId'
@@ -783,8 +784,8 @@ paths:
       operationId: getSourceRunResult
       tags: [Source APIs]
       summary: Read a source run's result
-      description: Same as `getRunResult` for a run of this source (a run of another source answers `404`). Needs the `results` scope.
-      x-scopes-any-of: [results]
+      description: Same as `getRunResult` for a run of this source (a run of another source answers `404`). Needs the `run` or `results` scope.
+      x-scopes-any-of: [run, results]
       parameters:
         - $ref: '#/components/parameters/SourceId'
         - $ref: '#/components/parameters/RunId'
@@ -918,9 +919,10 @@ paths:
       tags: [Source APIs]
       summary: Read a source's health
       description: |
-        Monitoring evidence for the active definition. No customer scope opens this route today: a scoped key
-        answers `403` (`FINDINGS.md`, finding 5). It is listed because the engine serves it on the API origin.
-      x-scopes-any-of: []
+        Monitoring evidence for the active definition of one of your workspace's sources. Needs the `read` scope
+        (`FINDINGS.md`, finding 5). A catalog API's source id, or one from another workspace, answers `404`
+        (`Unknown API`).
+      x-scopes-any-of: [read]
       parameters:
         - $ref: '#/components/parameters/SourceId'
       responses:
@@ -1466,7 +1468,10 @@ components:
     Forbidden:
       description: |
         The key lacks the scope or the access, or is not tied to a workspace account. Typical details are
-        `Credential scope does not allow this operation` and `workspace_billing_identity_invalid`.
+        `Credential scope does not allow this operation` and `workspace_billing_identity_invalid`. A malformed
+        `run_id` or `schedule_id` (not 32 lowercase hex characters) also answers `403`, with
+        `Customer credential cannot access this route`: the id does not match any route a customer key may use
+        (`FINDINGS.md`, finding 14).
       content:
         application/json:
           schema:
@@ -1518,8 +1523,12 @@ components:
       description: |
         An input or run option the contract does not accept, or an invalid query. `detail` is an object with a
         `code` (`run_option_invalid`, `idempotency_key_required`, `invalid_catalog_query`, `catalog_version_invalid`,
-        `run_fields_invalid`, `run_list_query_invalid`, `run_items_query_invalid`, `source_input_invalid`, ...) or,
-        for a plain FastAPI validation failure, a list of issues.
+        `run_fields_invalid`, `run_list_query_invalid`, `run_items_query_invalid`, ...) or, for a plain FastAPI
+        validation failure, a list of issues. An input the source refuses (for example an unknown input field) is
+        different: the run is created and fails, so `detail` is the failed-run marker (`error_code: run_failed`,
+        `run_id`, `retryable: false`) with `classification: source_input_invalid`, `reason: input_invalid` and the
+        failed `constraint`, and the answer carries a `Location` header. Nothing is charged (`FINDINGS.md`,
+        finding 13).
       content:
         application/json:
           schema:
@@ -2406,6 +2415,32 @@ components:
           type: boolean
         records_observed:
           type: [integer, 'null']
+        monitoring_due_at:
+          type: [number, 'null']
+          description: When the next monitoring check is due (Unix seconds).
+        environment:
+          type: string
+          description: Where the checks ran, for example `production`.
+        coverage:
+          type: string
+          description: How much the checks cover, for example `bounded_sample`.
+        semantic_status:
+          type: string
+          description: Whether the records were also checked for meaning, for example `unqualified`.
+        case_coverage:
+          type: object
+          additionalProperties: true
+          description: Counts of the monitored input cases (`total`, `checked`, `current`, `healthy`, `overdue`) and a `state`.
+        monitored_case:
+          type: [object, 'null']
+          additionalProperties: true
+        sampled_scope:
+          type: [object, 'null']
+          additionalProperties: true
+        incident:
+          type: [object, 'null']
+          additionalProperties: true
+          description: The open incident, if any.
         incidents:
           type: array
           items:
@@ -2553,6 +2588,12 @@ components:
             enum: [deferred, overdue, previous_run_stuck]
         created_at:
           type: string
+        version:
+          type: integer
+          description: For a catalog schedule, the major version of the API it is pinned to.
+        last_run_rerouted:
+          type: [string, 'null']
+          description: Why the last run did not use the pinned major version (for example `sunset`), or null.
         paused_at:
           type: string
         inflight_run_id:

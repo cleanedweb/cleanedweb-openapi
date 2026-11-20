@@ -6,9 +6,10 @@ writing `openapi.yaml`. Engine paths are relative to `cleanedweb-com/cleanedweb/
 `cleanedweb-site/docs/content/`. Checked 2026-11-20. The spec and the conformance cases cite these
 by number.
 
-**Status 2026-11-20:** findings 2, 5 and 10 are fixed in the engine at `577f32222e` (live after the next
-engine release). Findings 1, 3, 4, 6, 7, 8, 9 and 11 are fixed in the site docs and are live. The SDKs default
-to `https://api.cleanedweb.com`.
+**Status 2026-11-20:** findings 2, 5 and 10 are fixed in the engine at `577f32222e`, released and live:
+`/openapi.json` and `/docs` answer `404`, and source health answers `200` to a `read` key (live run below).
+Findings 1, 3, 4, 6, 7, 8, 9 and 11 are fixed in the site docs and are live. The SDKs default to
+`https://api.cleanedweb.com`. Findings 12 to 15 come from the live run and are documented in `openapi.yaml`.
 
 ## 1. The API origin is `https://api.cleanedweb.com`, not the broker
 
@@ -109,9 +110,46 @@ including admin, control and pipeline-suite routes. Most response schemas are `{
 - `stop_reason` is an open set; the store keeps `page_limit` and derives the public value.
 - `/filters` and `/v1/credential` are reachable but undocumented.
 
-## Needs a real API key
+## 12. `/filters` errors use a different envelope
 
-- Confirm finding 2 with a production `run`-only key.
-- Exact `202` and `200` bodies and headers of a real run; real `402`, `409` and `429` bodies.
-- Schedule routes, `getSourceRun`, `getSourceVersionContract`, `getSourceConnection`,
-  `listSourceVersions`, `/filters`, and a real `/stream` run.
+An endpoint without category filters answers `404`
+`{"error": {"code": "category_filters_unavailable", "details": {"reason": "no_category_filters_evidence"}, "message": ...}}`;
+every other route wraps errors in `detail`. SDKs that read only `detail` lose the code.
+
+## 13. A refused run input is a failed run, not a validation error
+
+An unknown input field answers `422` whose `detail` is the failed-run marker (`error_code: run_failed`,
+`run_id`, `retryable: false`, `classification: source_input_invalid`, `reason: input_invalid`,
+`constraint: additionalProperties`) plus a `Location` header. A failed run is recorded and nothing is charged.
+The docs listed `source_input_invalid` as a `detail.code`. The Python, JS and Go SDKs already raise the
+failed-run error for it.
+
+## 14. A malformed run or schedule id answers `403`
+
+`GET /v1/runs/notahexid` and `GET /v1/schedules/notanid` answer `403`
+`Customer credential cannot access this route`, not `404` or `422`: the scope patterns only match 32 hex
+characters, so the path is no customer route at all.
+
+## 15. Smaller differences seen live
+
+- `GET /v1/runs/{id}/result` has no top-level `version`; the catalog `/result` has one.
+- Schedules carry `version` (pinned major) and `last_run_rerouted` on catalog schedules.
+- Every response carries `Cache-Control: no-store`.
+- A finished, bounded run read through `getSourceRun` reports `run.outcome: partial` and
+  `recovery.state: unconfirmed`.
+
+## Live run 2026-11-20
+
+One small run (RubyGems gem search, `max_items` 3) through each client on a customer key with the `read`,
+`run` and `results` scopes: Python, JS and Go SDKs and the n8n node got `202` then `200` from `/result`
+after `Retry-After: 30`; the GitHub Action got `200` directly. All parsed the records, items pages
+(`X-Next-Cursor`), run reads and run lists as specified, and never resent the run while polling. Free errors
+observed: `401` (`{"detail": "Unauthorized"}`), `404` (`catalog_not_found`, `Run not found`,
+`catalog_delivery_not_found`, `schedule_not_found`), `422` (`run_option_invalid`, `idempotency_key_required`,
+`run_items_query_invalid`, `run_nulls_invalid`, `run_list_query_invalid`), `409`
+(`delivery_identity_conflict` for a reused Idempotency-Key with another body, charged nothing; the same body
+replays `200`; `schedule_idempotency_conflict`, `schedule_not_paused`). Schedule create (`201`), replay
+(`200`, `Idempotent-Replayed: true`), pause, delete and get-after-delete (`404`) match the spec.
+
+Still not observed: `402`, `429`, `5xx`, a source run, `/stream`, `abortRun`, `/filters` for an endpoint
+that has category filters, and finding 2 with a key that has `run` but not `results`.

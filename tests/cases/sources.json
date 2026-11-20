@@ -913,8 +913,8 @@
       }
     },
     {
-      "id": "sources_health_forbidden_for_scoped_keys",
-      "title": "sources.health answers 403 to every scoped customer key",
+      "id": "sources_health_forbidden_without_read",
+      "title": "sources.health answers 403 to a key without the read scope: a typed permission error, not a retry loop",
       "operation": "sources.health",
       "client": {
         "api_key": "cw_test_key",
@@ -948,7 +948,7 @@
         },
         "sleeps": []
       },
-      "spec_note": "FINDINGS.md finding 5: no scope opens this route."
+      "spec_note": "FINDINGS.md finding 5: the route needs the read scope (no scope opened it before engine 577f32222e)."
     },
     {
       "id": "sources_health_ok",
