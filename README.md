@@ -4,8 +4,8 @@ The OpenAPI 3.1 description of the public [CleanedWeb](https://cleanedweb.com/?u
 API, and the language-neutral conformance cases every CleanedWeb SDK runs in CI. CleanedWeb turns public website
 collections (listings, products, jobs, articles, profiles) into maintained REST APIs that return structured records.
 
-> **Pre-release.** The contract may change before the first SDK release. SDKs: [cleanedweb-go](https://github.com/cleanedweb/cleanedweb-go),
-> [cleanedweb-python](https://github.com/cleanedweb/cleanedweb-python), [cleanedweb-js](https://github.com/cleanedweb/cleanedweb-js).
+SDKs: [cleanedweb-go](https://github.com/cleanedweb/cleanedweb-go),
+[cleanedweb-python](https://github.com/cleanedweb/cleanedweb-python), [cleanedweb-js](https://github.com/cleanedweb/cleanedweb-js).
 
 **Pricing:** 5,000 records free once, then prepaid credit from $1 per 1,000 records delivered, no subscription.
 [Pricing](https://cleanedweb.com/pricing/?utm_source=github&utm_medium=cleanedweb-openapi)
